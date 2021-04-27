@@ -1,0 +1,16 @@
+
+Data/
+
+Results/
+
+Comparativas/
+
+JSON Test Evaluation Files/
+
+Ejemplos CAM/
+
+__pycache__/
+
+\.idea/
+
+*.tar
