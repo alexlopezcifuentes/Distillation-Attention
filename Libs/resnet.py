@@ -1,11 +1,19 @@
 import torch
 import torch.nn as nn
+import os
 
-__all__ = ['ResNet', 'resnet18', 'resnet50']
+__all__ = ['ResNet', 'resnet18', 'resnet50', 'resnet152']
 
 model_urls = {
-    'resnet18': 'https://download.pytorch.org/models/resnet18-5c106cde.pth',
-    'resnet50': 'https://download.pytorch.org/models/resnet50-19c8e357.pth',
+    'resnet18': 'https://download.pytorch.org/models/resnet18-f37072fd.pth',
+    'resnet34': 'https://download.pytorch.org/models/resnet34-b627a593.pth',
+    'resnet50': 'https://download.pytorch.org/models/resnet50-0676ba61.pth',
+    'resnet101': 'https://download.pytorch.org/models/resnet101-63fe2227.pth',
+    'resnet152': 'https://download.pytorch.org/models/resnet152-394f9c45.pth',
+    'resnext50_32x4d': 'https://download.pytorch.org/models/resnext50_32x4d-7cdf4587.pth',
+    'resnext101_32x8d': 'https://download.pytorch.org/models/resnext101_32x8d-8ba56ff5.pth',
+    'wide_resnet50_2': 'https://download.pytorch.org/models/wide_resnet50_2-95faca4d.pth',
+    'wide_resnet101_2': 'https://download.pytorch.org/models/wide_resnet101_2-32ee1156.pth',
 }
 
 
@@ -145,13 +153,6 @@ class ResNet(nn.Module):
         self.layer4 = self._make_layer(block, 512, layers[3], stride=2,
                                        dilate=replace_stride_with_dilation[2])
 
-        # if self.arch.lower() == 'resnet18':
-        #     self.attention = torch.nn.Sequential(
-        #         torch.nn.Conv2d(2048, 512, kernel_size=3, padding=1),
-        #         norm_layer(512),
-        #         self.relu,
-        #     )
-
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
         self.fc = nn.Linear(512 * block.expansion, num_classes)
 
@@ -196,7 +197,7 @@ class ResNet(nn.Module):
 
         return nn.Sequential(*layers)
 
-    def _forward_impl(self, x, f_t=None):
+    def _forward_impl(self, x):
         # See note [TorchScript super()]
         x = self.conv1(x)
         x = self.bn1(x)
@@ -208,10 +209,6 @@ class ResNet(nn.Module):
         a2 = self.layer3(a1)
         a3 = self.layer4(a2)
 
-        # if self.arch.lower() == 'resnet18':
-        #     f_t = self.attention(f_t)
-        #     a3 = a3 * f_t
-
         x = self.avgpool(a3)
         x = torch.flatten(x, 1)
         x = self.fc(x)
@@ -221,15 +218,26 @@ class ResNet(nn.Module):
         else:
             return x, (a3,)
 
-    def forward(self, x, f_t=None):
-        return self._forward_impl(x, f_t)
+    def forward(self, x):
+        return self._forward_impl(x)
 
 
-def _resnet(arch, block, layers, pretrained, progress, **kwargs):
+def _resnet(arch, block, layers, pretrained, progress, num_classes, **kwargs):
     model = ResNet(arch, block, layers, **kwargs)
-    if pretrained:
+    if pretrained.lower() == 'imagenet':
         state_dict = torch.hub.load_state_dict_from_url(model_urls[arch], progress=progress)
         model.load_state_dict(state_dict)
+        print('Model preloaded with ImageNet weights')
+    elif pretrained.lower() == 'places':
+        state_dict = torch.load(os.path.join('Data', 'Model Zoo', 'RGB_' + arch + '_Places_New.pth.tar'))
+        del state_dict['fc.weight']
+        del state_dict['fc.bias']
+        model.load_state_dict(state_dict, strict=False)
+        print('Model preloaded with Places365 weights')
+
+    # Change last FC layer
+    model.fc = nn.Linear(512 * block.expansion, num_classes)
+
     return model
 
 
@@ -254,4 +262,15 @@ def resnet50(pretrained=False, progress=True, **kwargs):
         progress (bool): If True, displays a progress bar of the download to stderr
     """
     return _resnet('resnet50', Bottleneck, [3, 4, 6, 3], pretrained, progress,
+                   **kwargs)
+
+
+def resnet152(pretrained=False, progress= True, **kwargs):
+    r"""ResNet-152 model from
+    `"Deep Residual Learning for Image Recognition" <https://arxiv.org/pdf/1512.03385.pdf>`_.
+    Args:
+        pretrained (bool): If True, returns a model pre-trained on ImageNet
+        progress (bool): If True, displays a progress bar of the download to stderr
+    """
+    return _resnet('resnet152', Bottleneck, [3, 8, 36, 3], pretrained, progress,
                    **kwargs)

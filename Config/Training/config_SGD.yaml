@@ -10,8 +10,9 @@ TRAINING:
 #        TEACHER: None
         TEACHER: 'Teacher ResNet50 ADE20K'
         D_LOSS: DFT # NewL2, L2, L2Paper, Inner, MassCenter, Gaussian, Gaussian_FID
-        ALPHA: 3
+        ALPHA: 1
         MULTISCALE: True
+        PRED_GUIDE: False
     OPTIMIZER:
         NAME: SGD
         LR: 0.1

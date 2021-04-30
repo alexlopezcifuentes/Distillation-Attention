@@ -17,7 +17,7 @@ import Utils as utils
 import PlottingUtils as GeneralPlottingUtils
 import Distillation
 from getConfiguration import getConfiguration, getValidationConfiguration
-from ADE20KDataset import ADE20KDataset
+from SceneRecognitionDataset import SceneRecognitionDataset
 import resnet
 
 
@@ -78,7 +78,9 @@ def train(train_loader, model, optimizer, loss_function, teacher_model=None):
         if Distillation_flag:
             # Forward through teacher
             with torch.no_grad():
-                _, features_teacher = teacher_model(images)
+                predictions_teacher, features_teacher = teacher_model(images)
+                predictions_teacher = torch.argmax(predictions_teacher, dim=1)
+                predictions_teacher = (predictions_teacher == labels).float()
 
         # CNN Forward
         output, features_student = model(images)
@@ -88,8 +90,11 @@ def train(train_loader, model, optimizer, loss_function, teacher_model=None):
 
         # Distillation Loss
         if Distillation_flag:
-            loss_distillation = Distillation.distillationLoss(CONFIG['TRAINING']['DISTILLATION']['D_LOSS'], features_student, features_teacher,
-                                                              iteration=i, epoch=epoch, results_path=ResultsPath)
+            loss_distillation = Distillation.distillationLoss(CONFIG['TRAINING']['DISTILLATION']['D_LOSS'], features_student, features_teacher)
+
+            # Supress those distillation losses that the teacher has failed
+            if CONFIG['TRAINING']['DISTILLATION']['PRED_GUIDE']:
+                loss_distillation *= predictions_teacher
 
             # Weight loss
             loss_distillation *= alpha
@@ -176,7 +181,9 @@ def validate(val_loader, model, loss_function, teacher_model=None):
             if Distillation_flag:
                 # Forward through teacher
                 with torch.no_grad():
-                    _, features_teacher = teacher_model(images)
+                    predictions_teacher, features_teacher = teacher_model(images)
+                    predictions_teacher = torch.argmax(predictions_teacher, dim=1)
+                    predictions_teacher = (predictions_teacher == labels).float()
 
             # CNN Forward
             output, features_student = model(images)
@@ -186,8 +193,11 @@ def validate(val_loader, model, loss_function, teacher_model=None):
 
             # Distillation Loss
             if Distillation_flag:
-                loss_distillation = Distillation.distillationLoss(CONFIG['TRAINING']['DISTILLATION']['D_LOSS'], features_student, features_teacher,
-                                                                  iteration=i, epoch=epoch, results_path=ResultsPath)
+                loss_distillation = Distillation.distillationLoss(CONFIG['TRAINING']['DISTILLATION']['D_LOSS'], features_student, features_teacher)
+
+                # Supress those distillation losses that the teacher has failed
+                if CONFIG['TRAINING']['DISTILLATION']['PRED_GUIDE']:
+                    loss_distillation *= predictions_teacher
 
                 # Weight loss
                 loss_distillation *= alpha
@@ -280,13 +290,20 @@ with open(os.path.join(ResultsPath, 'config_' + args.Training + '.yaml'), 'w') a
 
 # Given the configuration file build the desired CNN network
 if CONFIG['MODEL']['ARCH'].lower() == 'resnet18':
-    model = resnet.resnet18(pretrained=(CONFIG['MODEL']['PRETRAINED'].lower() == 'imagenet'),
+    model = resnet.resnet18(pretrained=CONFIG['MODEL']['PRETRAINED'],
                             num_classes=CONFIG['DATASET']['N_CLASSES'],
                             multiscale=CONFIG['TRAINING']['DISTILLATION']['MULTISCALE'])
 elif CONFIG['MODEL']['ARCH'].lower() == 'resnet50':
-    model = resnet.resnet50(pretrained=(CONFIG['MODEL']['PRETRAINED'].lower() == 'imagenet'),
+    model = resnet.resnet50(pretrained=CONFIG['MODEL']['PRETRAINED'],
                             num_classes=CONFIG['DATASET']['N_CLASSES'],
                             multiscale=CONFIG['TRAINING']['DISTILLATION']['MULTISCALE'])
+elif CONFIG['MODEL']['ARCH'].lower() == 'resnet152':
+    model = resnet.resnet152(pretrained=CONFIG['MODEL']['PRETRAINED'],
+                             num_classes=CONFIG['DATASET']['N_CLASSES'],
+                             multiscale=CONFIG['TRAINING']['DISTILLATION']['MULTISCALE'])
+else:
+    print('CNN Architecture specified does not exit.')
+    exit()
 
 # Extract model parameters
 model_parameters = filter(lambda p: p.requires_grad, model.parameters())
@@ -320,9 +337,9 @@ else:
 print('-' * 65)
 print('Loading dataset {}...'.format(CONFIG['DATASET']['NAME']))
 
-if CONFIG['DATASET']['NAME'] == 'ADE20K':
-    trainDataset = ADE20KDataset(CONFIG, set='Training', mode='Train')
-    valDataset = ADE20KDataset(CONFIG, set='Validation', mode='Val')
+if CONFIG['DATASET']['NAME'] == 'ADE20K' or CONFIG['DATASET']['NAME'] == 'MIT67' or CONFIG['DATASET']['NAME'] == 'SUN397':
+    trainDataset = SceneRecognitionDataset(CONFIG, set='Train', mode='Train')
+    valDataset = SceneRecognitionDataset(CONFIG, set='Val', mode='Val')
 else:
     print('Dataset specified does not exit.')
     exit()

@@ -8,8 +8,32 @@ import numpy as np
 import torch
 
 
-class ADE20KDataset(Dataset):
+class SceneRecognitionDataset(Dataset):
     """Class for ADE20K dataset."""
+
+    def decodeADE20K(self, filenames_file):
+        with open(filenames_file) as class_file:
+            for line in class_file:
+                name, label = line.split()
+                self.filenames.append(name)
+                self.labels.append(label)
+                self.labelsindex.append(self.classes.index(label))
+
+    def decodeMIT67(self, filenames_file):
+        with open(filenames_file) as class_file:
+            for line in class_file:
+                _, label, name = line.split('/')
+                self.filenames.append(os.path.join(label, name[:name.find('.jpg')]))
+                self.labels.append(label)
+                self.labelsindex.append(self.classes.index(label))
+
+    def decodeSUN397(self, filenames_file):
+        with open(filenames_file) as class_file:
+            for line in class_file:
+                _, label, name = line.split('/')
+                self.filenames.append(os.path.join(label, name[:name.find('.jpg')]))
+                self.labels.append(label)
+                self.labelsindex.append(self.classes.index(label))
 
     def __init__(self, CONFIG, set, mode, tencrops=False):
         """
@@ -21,7 +45,7 @@ class ADE20KDataset(Dataset):
         :param tencrops: Boolean to use or not ten crop evaluation
         """
         # Extract main path and set (Train or Val)
-        self.image_dir = os.path.join(CONFIG['DATASET']['ROOT'], 'ADEChallengeData2016')
+        self.image_dir = CONFIG['DATASET']['ROOT']
         self.set = set.lower()
         self.mode = mode.lower()
         # Set boolean variable of ten crops for validation
@@ -29,7 +53,7 @@ class ADE20KDataset(Dataset):
 
         # Decode dataset scene categories
         self.classes = list()
-        class_file_name = os.path.join(self.image_dir, "Scene_Names.txt")
+        class_file_name = os.path.join(self.image_dir, "scene_names.txt")
 
         with open(class_file_name) as class_file:
             for line in class_file:
@@ -41,14 +65,14 @@ class ADE20KDataset(Dataset):
         self.filenames = list()
         self.labels = list()
         self.labelsindex = list()
-        filenames_file = os.path.join(self.image_dir, "sceneCategories_" + self.set + ".txt")
+        filenames_file = os.path.join(self.image_dir, self.set + ".txt")
 
-        with open(filenames_file) as class_file:
-            for line in class_file:
-                name, label = line.split()
-                self.filenames.append(name)
-                self.labels.append(label)
-                self.labelsindex.append(self.classes.index(label))
+        if CONFIG['DATASET']['NAME'] == 'ADE20K':
+            self.decodeADE20K(filenames_file)
+        elif CONFIG['DATASET']['NAME'] == 'MIT67':
+            self.decodeMIT67(filenames_file)
+        elif CONFIG['DATASET']['NAME'] == 'SUN397':
+            self.decodeSUN397(filenames_file)
 
         # Control Statements for data loading
         assert len(self.filenames) == len(self.labels)
@@ -99,7 +123,7 @@ class ADE20KDataset(Dataset):
         """
 
         # Get RGB image path and load it
-        img_name = os.path.join(self.image_dir, "images", self.set, (self.filenames[idx] + ".jpg"))
+        img_name = os.path.join(self.image_dir, self.set, (self.filenames[idx] + ".jpg"))
         img = Image.open(img_name)
 
         # Convert it to RGB if gray-scale

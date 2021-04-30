@@ -1,6 +1,6 @@
 DATASET:
     NAME: ADE20K
-    ROOT: ./Data
+    ROOT: ./Data/ADEChallengeData2016
     N_CLASSES: 1055
     MEAN: [0.43216, 0.394666, 0.37645] # ImageNet
     STD: [0.22803, 0.22145, 0.216989] # ImageNet

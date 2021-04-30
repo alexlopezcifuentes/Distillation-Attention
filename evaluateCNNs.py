@@ -16,7 +16,7 @@ import shutil
 import yaml
 import Utils as utils
 from getConfiguration import getValidationConfiguration
-from ADE20KDataset import ADE20KDataset
+from SceneRecognitionDataset import SceneRecognitionDataset
 import matplotlib.pyplot as plt
 import resnet
 import pickle
@@ -170,6 +170,11 @@ if CONFIG['MODEL']['ARCH'].lower() == 'resnet18':
     model = resnet.resnet18(pretrained=False, num_classes=CONFIG['DATASET']['N_CLASSES'])
 elif CONFIG['MODEL']['ARCH'].lower() == 'resnet50':
     model = resnet.resnet50(pretrained=False, num_classes=CONFIG['DATASET']['N_CLASSES'])
+elif CONFIG['MODEL']['ARCH'].lower() == 'resnet152':
+    model = resnet.resnet152(pretrained=False, num_classes=CONFIG['DATASET']['N_CLASSES'])
+else:
+    print('CNN Architecture specified does not exit.')
+    exit()
 
 # Extract model parameters
 model_parameters = filter(lambda p: p.requires_grad, model.parameters())
@@ -205,8 +210,8 @@ else:
 print('-' * 65)
 print('Loading dataset {}...'.format(CONFIG['DATASET']['NAME']))
 
-if CONFIG['DATASET']['NAME'] == 'ADE20K':
-    valDataset = ADE20KDataset(CONFIG, set='Validation', mode='Val')
+if CONFIG['DATASET']['NAME'] == 'ADE20K' or CONFIG['DATASET']['NAME'] == 'MIT67' or CONFIG['DATASET']['NAME'] == 'SUN397':
+    valDataset = SceneRecognitionDataset(CONFIG, set='Val', mode='Val')
 else:
     print('Dataset specified does not exit.')
     exit()

@@ -11,7 +11,7 @@ import numpy as np
 import shutil
 import Utils as utils
 from getConfiguration import getValidationConfiguration
-from ADE20KDataset import ADE20KDataset
+from SceneRecognitionDataset import SceneRecognitionDataset
 import resnet
 import pickle
 
@@ -47,9 +47,9 @@ if not os.path.isdir(os.path.join(ResultsPath, 'CAMs')):
 #            Dataset            #
 # ----------------------------- #
 
-if CONFIG['DATASET']['NAME'] == 'ADE20K':
-    # valDataset = ADE20KDataset(CONFIG, set='Validation', mode='Val')
-    valDataset = ADE20KDataset(CONFIG, set='Training', mode='Val')
+if CONFIG['DATASET']['NAME'] == 'ADE20K' or CONFIG['DATASET']['NAME'] == 'MIT67' or CONFIG['DATASET']['NAME'] == 'SUN397':
+    # valDataset = ADE20KDataset(CONFIG, set='Val', mode='Val')
+    valDataset = SceneRecognitionDataset(CONFIG, set='Train', mode='Val')
 else:
     print('Dataset specified does not exit.')
     exit()
@@ -99,6 +99,8 @@ else:
 
 
 n_images2save = 600
+
+print('Saving {} AMs'.format(n_images2save))
 
 prediction_list = list()
 gt_list = list()

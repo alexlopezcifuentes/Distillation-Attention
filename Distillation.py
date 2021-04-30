@@ -136,7 +136,7 @@ def getMassCenterLoss(AMs_student, AMs_teacher):
     return destillation_loss
 
 
-def distillationLoss(loss, features_student, features_teacher, iteration, epoch, results_path):
+def distillationLoss(loss, features_student, features_teacher):
 
     # Compute Loss
     bs, chns, h, w = features_student[-1].shape
