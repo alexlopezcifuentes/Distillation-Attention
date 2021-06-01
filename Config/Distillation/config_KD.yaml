@@ -1,0 +1,7 @@
+DISTILLATION:
+    TEACHER: 'Teacher ResNet50 ADE20K' # Options, Path or None
+    D_LOSS: KD
+    TEMPERATURE: 4
+    ALPHA: 0.8
+    MULTISCALE: False
+

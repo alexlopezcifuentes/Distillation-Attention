@@ -1,5 +1,7 @@
 import sys
 sys.path.insert(0, './Libs')
+sys.path.insert(0, './Distillation Zoo')
+sys.path.insert(0, './Distillation Zoo/crd')
 sys.path.insert(0, './Libs/Datasets')
 import argparse
 import os
@@ -16,15 +18,31 @@ import yaml
 import Utils as utils
 import PlottingUtils as GeneralPlottingUtils
 import Distillation
-from getConfiguration import getConfiguration, getValidationConfiguration
+from getConfiguration import getConfiguration
 from SceneRecognitionDataset import SceneRecognitionDataset
+from SceneRecognitionDatasetCRD import SceneRecognitionDatasetCRD
 import resnet
+import mobilenetv2
+
+# Distill Models
+from DFTOurs import DFTOurs
+from AT import Attention
+from KD import DistillKL
+from PKT import PKT
+from VID import VIDLoss
+from criterion import CRDLoss
+from SemCKD import SemCKDLoss
 
 
 """
-Regular CNN training code. Code for testing Distillation by Attention.
+Using a DCT-driven Loss in Attention-based Knowledge-Distillation for Scene Recognition
 
-Fully developed by Alejandro Lopez-Cifuentes.
+trainCNNs.py
+Python file to train the models. It is fed with the configuration files from Config/ folder.
+You must specify which Dataset, Architecture, Training, and Distillation to use. If not the defaults will
+be used.
+
+Fully developed by Anonymous Code Author.
 """
 
 # Definition of arguments. All of them are optional. If no configurations are provided the selected in
@@ -34,10 +52,11 @@ parser = argparse.ArgumentParser(description='Video Classification')
 parser.add_argument('--Dataset', metavar='DIR', help='Dataset to be used', required=False)
 parser.add_argument('--Architecture', metavar='DIR', help='Architecture to be used', required=False)
 parser.add_argument('--Training', metavar='DIR', help='Training to be used', required=False)
+parser.add_argument('--Distillation', metavar='DIR', help='Distillation to be used', required=False)
 parser.add_argument('--Options', metavar='DIR', nargs='+', help='an integer for the accumulator')
 
 
-def train(train_loader, model, optimizer, loss_function, teacher_model=None):
+def train(train_loader, model, optimizer, criterion_list, teacher_model=None):
 
     # Start training time counter
     train_time_start = time.time()
@@ -57,15 +76,28 @@ def train(train_loader, model, optimizer, loss_function, teacher_model=None):
         'classification': utils.AverageMeter(),
     }
 
+    # Losses
+    loss_function_distill = criterion_list[0]
+    loss_function_kd = criterion_list[1]
+    loss_function_class = criterion_list[2]
+
     # Switch to train mode
     model.train()
 
     # Extract batch size
     batch_size = train_loader.batch_size
 
+    # Weight for Cross Entropy Loss
+    beta = float(CONFIG['TRAINING']['LOSS']['BETA'])
+    # Weight for Distillation Loss
+    alpha = float(CONFIG['DISTILLATION']['ALPHA'])
+    # Weight for Original Knowledge Distillation Loss
+    delta = float(CONFIG['TRAINING']['KD']['DELTA'])
+
     # Distillation
     loss_distillation = torch.tensor(0).float().cuda()
-    alpha = float(CONFIG['TRAINING']['DISTILLATION']['ALPHA'])
+    # Original Distillation
+    loss_kd = torch.tensor(0).float().cuda()
 
     for i, (mini_batch) in enumerate(train_loader):
         # Start batch_time
@@ -73,39 +105,42 @@ def train(train_loader, model, optimizer, loss_function, teacher_model=None):
         if USE_CUDA:
             images = mini_batch['Images'].cuda()
             labels = mini_batch['Labels'].cuda()
+            if CONFIG['DISTILLATION']['D_LOSS'].lower() == 'crd':
+                index = mini_batch['Idx'].cuda()
+                contrast_idx = mini_batch['Sample Idx'].cuda()
+            elif CONFIG['DISTILLATION']['D_LOSS'].lower() == 'ckd' and images.shape[0] < batch_size:
+                continue
+            else:
+                index = None
+                contrast_idx = None
+
+        # CNN Forward
+        output_student, features_student = model(images)
+
+        # Classification Loss
+        loss_class = loss_function_class(output_student, labels.long())
+        loss_class *= beta
 
         # Distillation Loss
         if Distillation_flag:
             # Forward through teacher
             with torch.no_grad():
-                predictions_teacher, features_teacher = teacher_model(images)
-                predictions_teacher = torch.argmax(predictions_teacher, dim=1)
-                predictions_teacher = (predictions_teacher == labels).float()
+                output_teacher, features_teacher = teacher_model(images)
 
-        # CNN Forward
-        output, features_student = model(images)
-
-        # Classification Loss
-        loss_class = loss_function(output, labels.long())
-
-        # Distillation Loss
-        if Distillation_flag:
-            loss_distillation = Distillation.distillationLoss(CONFIG['TRAINING']['DISTILLATION']['D_LOSS'], features_student, features_teacher)
-
-            # Supress those distillation losses that the teacher has failed
-            if CONFIG['TRAINING']['DISTILLATION']['PRED_GUIDE']:
-                loss_distillation *= predictions_teacher
-
-            # Weight loss
+            # Knowledge Distillation
+            loss_distillation = Distillation.KnowledgeDistillation(CONFIG, loss_function_distill, features_student, features_teacher,
+                                                                   output_student, output_teacher, labels, index, contrast_idx)
             loss_distillation *= alpha
 
+            # Original Knowledge-Distillation Loss (Hinton)
+            loss_kd = loss_function_kd(output_student, output_teacher)
+            loss_kd *= delta
+
         # Final loss
-        loss_class = loss_class.mean()
-        loss_distillation = loss_distillation.mean()
-        loss = loss_class + loss_distillation
+        loss = loss_class + loss_distillation + loss_kd
 
         # Compute and save accuracy
-        acc = utils.accuracy(output, labels, topk=(1,))
+        acc = utils.accuracy(output_student, labels, topk=(1,))
 
         # Save Losses and Accuracies
         losses['total'].update(loss.item(), batch_size)
@@ -139,7 +174,7 @@ def train(train_loader, model, optimizer, loss_function, teacher_model=None):
     return losses, accuracies
 
 
-def validate(val_loader, model, loss_function, teacher_model=None):
+def validate(val_loader, model, criterion_list, teacher_model=None):
 
     # Start validation time counter
     val_time_start = time.time()
@@ -162,12 +197,25 @@ def validate(val_loader, model, loss_function, teacher_model=None):
     # Switch to eval mode
     model.eval()
 
+    # Losses
+    loss_function_distill = criterion_list[0]
+    loss_function_kd = criterion_list[1]
+    loss_function_class = criterion_list[2]
+
+    # Weight for Cross Entropy Loss
+    beta = float(CONFIG['TRAINING']['LOSS']['BETA'])
+    # Weight for Distillation Loss
+    alpha = float(CONFIG['DISTILLATION']['ALPHA'])
+    # Weight for Original Knowledge Distillation Loss
+    delta = float(CONFIG['TRAINING']['KD']['DELTA'])
+
     # Extract batch size
     batch_size = val_loader.batch_size
 
     # Distillation
     loss_distillation = torch.tensor(0).float()
-    alpha = float(CONFIG['TRAINING']['DISTILLATION']['ALPHA'])
+    # Original Distillation
+    loss_kd = torch.tensor(0).float().cuda()
 
     with torch.no_grad():
         for i, (mini_batch) in enumerate(val_loader):
@@ -176,39 +224,37 @@ def validate(val_loader, model, loss_function, teacher_model=None):
             if USE_CUDA:
                 images = mini_batch['Images'].cuda()
                 labels = mini_batch['Labels'].cuda()
+            if CONFIG['DISTILLATION']['D_LOSS'].lower() == 'ckd':
+                loss_function_distill.eval()
+                if images.shape[0] < batch_size:
+                    continue
+
+            # CNN Forward
+            output_student, features_student = model(images)
+
+            # Classification Loss
+            loss_class = loss_function_class(output_student, labels.long())
+            loss_class *= beta
 
             # Distillation Loss
             if Distillation_flag:
                 # Forward through teacher
-                with torch.no_grad():
-                    predictions_teacher, features_teacher = teacher_model(images)
-                    predictions_teacher = torch.argmax(predictions_teacher, dim=1)
-                    predictions_teacher = (predictions_teacher == labels).float()
+                output_teacher, features_teacher = teacher_model(images)
 
-            # CNN Forward
-            output, features_student = model(images)
-
-            # Classification Loss
-            loss_class = loss_function(output, labels.long())
-
-            # Distillation Loss
-            if Distillation_flag:
-                loss_distillation = Distillation.distillationLoss(CONFIG['TRAINING']['DISTILLATION']['D_LOSS'], features_student, features_teacher)
-
-                # Supress those distillation losses that the teacher has failed
-                if CONFIG['TRAINING']['DISTILLATION']['PRED_GUIDE']:
-                    loss_distillation *= predictions_teacher
-
-                # Weight loss
+                # Knowledge Distillation
+                loss_distillation = Distillation.KnowledgeDistillation(CONFIG, loss_function_distill, features_student, features_teacher,
+                                                                       output_student, output_teacher, labels)
                 loss_distillation *= alpha
 
+                # Original Knowledge-Distillation Loss (Hinton)
+                loss_kd = loss_function_kd(output_student, output_teacher)
+                loss_kd *= delta
+
             # Final loss
-            loss_class = loss_class.mean()
-            loss_distillation = loss_distillation.mean()
-            loss = loss_class + loss_distillation
+            loss = loss_class + loss_distillation + loss_kd
 
             # Compute and save accuracy
-            acc = utils.accuracy(output, labels, topk=(1,))
+            acc = utils.accuracy(output_student, labels, topk=(1,))
 
             # Save Losses and Accuracies
             losses['total'].update(loss.item(), batch_size)
@@ -244,7 +290,7 @@ global USE_CUDA, CONFIG
 USE_CUDA = torch.cuda.is_available()
 
 args = parser.parse_args()
-CONFIG, dataset_CONFIG, architecture_CONFIG, training_CONFIG = getConfiguration(args)
+CONFIG, dataset_CONFIG, architecture_CONFIG, training_CONFIG, distillation_CONFIG = getConfiguration(args)
 
 print('The following configuration is used for the training')
 print(yaml.dump(CONFIG, allow_unicode=True, default_flow_style=False))
@@ -263,7 +309,8 @@ print('-' * 65)
 # Create folders to save results
 Date = str(time.localtime().tm_year) + '-' + str(time.localtime().tm_mon).zfill(2) + '-' + str(time.localtime().tm_mday).zfill(2) +\
        ' ' + str(time.localtime().tm_hour).zfill(2) + ':' + str(time.localtime().tm_min).zfill(2) + ':' + str(time.localtime().tm_sec).zfill(2)
-ResultsPath = os.path.join(CONFIG['MODEL']['OUTPUT_DIR'], Date + ' ' + CONFIG['MODEL']['ARCH'] + ' ' + CONFIG['DATASET']['NAME'])
+ResultsPath = os.path.join(CONFIG['MODEL']['OUTPUT_DIR'], CONFIG['DATASET']['NAME'], Date + ' ' +
+                           CONFIG['MODEL']['ARCH'] + ' ' + CONFIG['DATASET']['NAME'] + ' ' + CONFIG['DISTILLATION']['D_LOSS'])
 
 os.mkdir(ResultsPath)
 os.mkdir(os.path.join(ResultsPath, 'Images'))
@@ -283,27 +330,28 @@ with open(os.path.join(ResultsPath, 'config_' + args.Architecture + '.yaml'), 'w
     yaml.safe_dump(architecture_CONFIG, file)
 with open(os.path.join(ResultsPath, 'config_' + args.Training + '.yaml'), 'w') as file:
     yaml.safe_dump(training_CONFIG, file)
+with open(os.path.join(ResultsPath, 'config_' + args.Distillation + '.yaml'), 'w') as file:
+    yaml.safe_dump(distillation_CONFIG, file)
+
 
 # ----------------------------- #
 #           Networks            #
 # ----------------------------- #
 
 # Given the configuration file build the desired CNN network
-if CONFIG['MODEL']['ARCH'].lower() == 'resnet18':
-    model = resnet.resnet18(pretrained=CONFIG['MODEL']['PRETRAINED'],
-                            num_classes=CONFIG['DATASET']['N_CLASSES'],
-                            multiscale=CONFIG['TRAINING']['DISTILLATION']['MULTISCALE'])
-elif CONFIG['MODEL']['ARCH'].lower() == 'resnet50':
-    model = resnet.resnet50(pretrained=CONFIG['MODEL']['PRETRAINED'],
-                            num_classes=CONFIG['DATASET']['N_CLASSES'],
-                            multiscale=CONFIG['TRAINING']['DISTILLATION']['MULTISCALE'])
-elif CONFIG['MODEL']['ARCH'].lower() == 'resnet152':
-    model = resnet.resnet152(pretrained=CONFIG['MODEL']['PRETRAINED'],
-                             num_classes=CONFIG['DATASET']['N_CLASSES'],
-                             multiscale=CONFIG['TRAINING']['DISTILLATION']['MULTISCALE'])
+if CONFIG['MODEL']['ARCH'].lower() == 'mobilenetv2':
+    model = mobilenetv2.mobilenet_v2(pretrained=CONFIG['MODEL']['PRETRAINED'],
+                                     num_classes=CONFIG['DATASET']['N_CLASSES'],
+                                     multiscale=CONFIG['DISTILLATION']['MULTISCALE'])
 else:
-    print('CNN Architecture specified does not exit.')
-    exit()
+    model = resnet.model_dict[CONFIG['MODEL']['ARCH'].lower()](pretrained=CONFIG['MODEL']['PRETRAINED'],
+                                                               num_classes=CONFIG['DATASET']['N_CLASSES'],
+                                                               multiscale=CONFIG['DISTILLATION']['MULTISCALE'])
+
+
+dummy_input = torch.randn(2, 3, CONFIG['MODEL']['CROP'], CONFIG['MODEL']['CROP'])
+_, feat_s = model(dummy_input)
+
 
 # Extract model parameters
 model_parameters = filter(lambda p: p.requires_grad, model.parameters())
@@ -312,12 +360,12 @@ model_parameters = sum([np.prod(p.size()) for p in model_parameters])
 if USE_CUDA:
     model.cuda()
 
-if CONFIG['TRAINING']['DISTILLATION']['TEACHER'] != 'None':
+if CONFIG['DISTILLATION']['TEACHER'] != 'None':
     Distillation_flag = True
-    print('Defining teacher as model from {}'.format(CONFIG['TRAINING']['DISTILLATION']['TEACHER']))
+    teacher_path = os.path.join(CONFIG['DATASET']['NAME'], 'Teachers', CONFIG['DISTILLATION']['TEACHER'])
+    print('Defining teacher as model from {}'.format(teacher_path))
 
-    model_teacher = Distillation.defineTeacher(CONFIG['TRAINING']['DISTILLATION']['TEACHER'],
-                                               multiscale=CONFIG['TRAINING']['DISTILLATION']['MULTISCALE'])
+    model_teacher = Distillation.defineTeacher(teacher_path)
 
     model_teacher_parameters = filter(lambda p: p.requires_grad, model_teacher.parameters())
     model_teacher_parameters = sum([np.prod(p.size()) for p in model_teacher_parameters])
@@ -325,9 +373,15 @@ if CONFIG['TRAINING']['DISTILLATION']['TEACHER'] != 'None':
     model_teacher.eval()
     if USE_CUDA:
         model_teacher.cuda()
+
+    _, feat_t = model_teacher(dummy_input.cuda())
 else:
     Distillation_flag = False
     model_teacher = None
+
+
+student_trainable_list = nn.ModuleList([])
+student_trainable_list.append(model)
 
 
 # ----------------------------- #
@@ -337,7 +391,10 @@ else:
 print('-' * 65)
 print('Loading dataset {}...'.format(CONFIG['DATASET']['NAME']))
 
-if CONFIG['DATASET']['NAME'] == 'ADE20K' or CONFIG['DATASET']['NAME'] == 'MIT67' or CONFIG['DATASET']['NAME'] == 'SUN397':
+if CONFIG['DISTILLATION']['D_LOSS'] == 'CRD':
+    trainDataset = SceneRecognitionDatasetCRD(CONFIG, set='Train', mode='Train')
+    valDataset = SceneRecognitionDataset(CONFIG, set='Val', mode='Val')
+elif CONFIG['DATASET']['NAME'] == 'ADE20K' or CONFIG['DATASET']['NAME'] == 'MIT67' or CONFIG['DATASET']['NAME'] == 'SUN397':
     trainDataset = SceneRecognitionDataset(CONFIG, set='Train', mode='Train')
     valDataset = SceneRecognitionDataset(CONFIG, set='Val', mode='Val')
 else:
@@ -351,6 +408,58 @@ val_loader = torch.utils.data.DataLoader(valDataset, batch_size=int(CONFIG['TRAI
                                          num_workers=8, pin_memory=True)
 
 dataset_nclasses = trainDataset.nclasses
+
+
+# ----------------------------- #
+#       Distillation Loss       #
+# ----------------------------- #
+criterion_list = nn.ModuleList([])
+
+if CONFIG['DISTILLATION']['D_LOSS'].lower() == 'dft':
+    loss_function_distill = DFTOurs()
+    loss_parameters = 0
+elif CONFIG['DISTILLATION']['D_LOSS'].lower() == 'at':
+    loss_function_distill = Attention()
+    loss_parameters = 0
+elif CONFIG['DISTILLATION']['D_LOSS'].lower() == 'kd':
+    loss_function_distill = DistillKL(T=CONFIG['DISTILLATION']['TEMPERATURE'])
+    loss_parameters = 0
+elif CONFIG['DISTILLATION']['D_LOSS'].lower() == 'pkt':
+    loss_function_distill = PKT()
+    loss_parameters = 0
+elif CONFIG['DISTILLATION']['D_LOSS'].lower() == 'vid':
+    # Get channel dimensions
+    s_n = [f.shape[1] for f in feat_s[1:-1]]
+    t_n = [f.shape[1] for f in feat_t[1:-1]]
+    loss_function_distill = nn.ModuleList([VIDLoss(s, t, t) for s, t in zip(s_n, t_n)]).cuda()
+    # add this as some parameters in VIDLoss need to be updated
+    student_trainable_list.append(loss_function_distill)
+    loss_parameters = filter(lambda p: p.requires_grad, loss_function_distill.parameters())
+    loss_parameters = sum([np.prod(p.size()) for p in loss_parameters])
+elif CONFIG['DISTILLATION']['D_LOSS'].lower() == 'crd':
+    s_dim = feat_s[-1].shape[1]
+    t_dim = feat_t[-1].shape[1]
+    loss_function_distill = CRDLoss(CONFIG, s_dim, t_dim, len(trainDataset)).cuda()
+    student_trainable_list.append(loss_function_distill.embed_s)
+    student_trainable_list.append(loss_function_distill.embed_t)
+    loss_parameters = filter(lambda p: p.requires_grad, loss_function_distill.parameters())
+    loss_parameters = sum([np.prod(p.size()) for p in loss_parameters])
+elif CONFIG['DISTILLATION']['D_LOSS'].lower() == 'ckd':
+    s_n = [f.shape[1] for f in feat_s[1:-1]]
+    t_n = [f.shape[1] for f in feat_t[1:-1]]
+    loss_function_distill = SemCKDLoss(feat_s, feat_t, int(CONFIG['TRAINING']['BATCH_SIZE']['BS_TRAIN']), s_n, t_n).cuda()
+    student_trainable_list.append(loss_function_distill.self_attention)
+    loss_parameters = filter(lambda p: p.requires_grad, loss_function_distill.self_attention.parameters())
+    loss_parameters = sum([np.prod(p.size()) for p in loss_parameters])
+else:
+    loss_function_distill = None
+
+
+# Knowledge distillation loss
+criterion_list.append(loss_function_distill)
+
+# KL divergence loss, original knowledge distillation from Hinton
+criterion_list.append(DistillKL(T=CONFIG['TRAINING']['KD']['TEMPERATURE']))
 
 # ----------------------------- #
 #          Information          #
@@ -366,26 +475,17 @@ print('-' * 65)
 print('Number of params: {}'.format(model_parameters))
 if Distillation_flag:
     print('-' * 65)
-    print('Using Teacher Distillation training. Number of params of the teacher: {}'.format(model_teacher_parameters))
-    if bool(CONFIG['TRAINING']['DISTILLATION']['MULTISCALE']):
+    print('Using {} Distillation training. Teacher to use {}. Number of params of the teacher: {}'.format(CONFIG['DISTILLATION']['D_LOSS'], teacher_path,
+                                                                                                          model_teacher_parameters))
+    if bool(CONFIG['DISTILLATION']['MULTISCALE']):
         print('Using Multiscale activation maps distillation')
     else:
         print('Using single scale activation maps distillation')
+    print('Extra number of parameters in the {} distillation loss {}'.format(CONFIG['DISTILLATION']['D_LOSS'], loss_parameters))
 print('-' * 65)
 print('GPU in use: {} with {} memory'.format(torch.cuda.get_device_name(0), torch.cuda.max_memory_allocated(0)))
 print('----------------------------------------------------------------')
 
-# print(model)
-# GeneralPlottingUtils.saveBatchExample(train_loader, os.path.join(ResultsPath, 'Images', 'Dataset', 'Training Batch Sample.png'))
-# GeneralPlottingUtils.saveBatchExample(val_loader, os.path.join(ResultsPath, 'Images', 'Dataset', 'Validation Batch Sample.png'))
-
-# print('-' * 65)
-# print('Generating histogram of samples...')
-
-# GeneralPlottingUtils.plotDatasetHistograms(trainDataset.noun_classes, trainDataset.HistNounClasses,
-#                                     os.path.join(ResultsPath, 'Images', 'Dataset'), set='Training', classtype='Noun')
-# GeneralPlottingUtils.plotDatasetHistograms(trainDataset.verb_classes, trainDataset.HistVerbClasses,
-#                                     os.path.join(ResultsPath, 'Images', 'Dataset'), set='Training', classtype='Verb')
 
 # ----------------------------- #
 #        Hyper Parameters       #
@@ -393,8 +493,7 @@ print('----------------------------------------------------------------')
 
 # Optimizers
 if CONFIG['TRAINING']['OPTIMIZER']['NAME'] == 'SGD':
-    optimizer = torch.optim.SGD(params=filter(lambda p: p.requires_grad, model.parameters()),
-                                lr=float(CONFIG['TRAINING']['OPTIMIZER']['LR']), momentum=0.9, weight_decay=1e-04)
+    optimizer = torch.optim.SGD(params=student_trainable_list.parameters(), lr=float(CONFIG['TRAINING']['OPTIMIZER']['LR']), momentum=0.9, weight_decay=1e-04)
 else:
     raise Exception('Optimizer {} was indicate in configuration file. This optimizer is not supported.\n'
                     'The following optimizers are supported: SGD'
@@ -411,19 +510,21 @@ else:
 
 # Loss Functions
 if CONFIG['TRAINING']['LOSS']['NAME'] == 'CROSS ENTROPY':
-    loss_function = nn.CrossEntropyLoss(reduction='none')
+    loss_function_class = nn.CrossEntropyLoss()
 else:
     raise Exception('Loss function {} was indicate in {} file. This Scheduler is not supported.\n'
                     'The following optimizers are supported: Cross-Entropy'
                     .format(CONFIG['TRAINING']['LOSS']['NAME'], args.ConfigPath))
 
+# Regular Cross-Entropy Loss
+criterion_list.append(loss_function_class)
 
 # ----------------------------- #
 #           Training            #
 # ----------------------------- #
 
 # Training epochs
-train_epochs = CONFIG['TRAINING']['EPOCHS']
+train_epochs = int(CONFIG['TRAINING']['EPOCHS'])
 actual_epoch = 0
 
 # Metrics per epoch
@@ -443,10 +544,10 @@ for epoch in range(actual_epoch, train_epochs):
     lr_list.append(optimizer.param_groups[0]['lr'])
 
     # Train one epoch
-    train_losses, train_accuracies = train(train_loader, model, optimizer, loss_function, model_teacher)
+    train_losses, train_accuracies = train(train_loader, model, optimizer, criterion_list, model_teacher)
 
     # Validate one epoch
-    val_losses, val_accuracies = validate(val_loader, model, loss_function, model_teacher)
+    val_losses, val_accuracies = validate(val_loader, model, criterion_list, model_teacher)
 
     # Scheduler step
     scheduler.step()
@@ -482,3 +583,6 @@ for epoch in range(actual_epoch, train_epochs):
     }, is_best, ResultsPath, CONFIG['MODEL']['ARCH'] + '_' + CONFIG['DATASET']['NAME'])
 
     print('Elapsed time for epoch {}: {time:.3f} minutes'.format(epoch, time=epoch_time))
+
+print('Training completed.')
+print('Best validation precision {acc:.2f}.'.format(acc=best_prec))

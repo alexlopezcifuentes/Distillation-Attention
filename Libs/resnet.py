@@ -204,19 +204,24 @@ class ResNet(nn.Module):
         x = self.relu(x)
         x = self.maxpool(x)
 
+        # a0 = [BS, C, 56, 56]
         a0 = self.layer1(x)
+        # a1 = [BS, C, 28, 28]
         a1 = self.layer2(a0)
+        # a2 = [BS, C, 14, 14]
         a2 = self.layer3(a1)
+        # a3 = [BS, C, 7, 7]
         a3 = self.layer4(a2)
 
         x = self.avgpool(a3)
-        x = torch.flatten(x, 1)
-        x = self.fc(x)
+        # a4 = [BS, C]
+        a4 = torch.flatten(x, 1)
+        x = self.fc(a4)
 
         if self.multiscale:
-            return x, (a0, a1, a2, a3)
+            return x, (a0, a1, a2, a3, a4)
         else:
-            return x, (a3,)
+            return x, None
 
     def forward(self, x):
         return self._forward_impl(x)
@@ -241,7 +246,7 @@ def _resnet(arch, block, layers, pretrained, progress, num_classes, **kwargs):
     return model
 
 
-def resnet18(pretrained=False, progress=True, **kwargs):
+def resnet18(pretrained='None', progress=True, **kwargs):
     r"""ResNet-18 model from
     `"Deep Residual Learning for Image Recognition" <https://arxiv.org/pdf/1512.03385.pdf>`_
 
@@ -253,7 +258,18 @@ def resnet18(pretrained=False, progress=True, **kwargs):
                    **kwargs)
 
 
-def resnet50(pretrained=False, progress=True, **kwargs):
+def resnet34(pretrained='None', progress=True, **kwargs):
+    r"""ResNet-34 model from
+    `"Deep Residual Learning for Image Recognition" <https://arxiv.org/pdf/1512.03385.pdf>`_.
+    Args:
+        pretrained (bool): If True, returns a model pre-trained on ImageNet
+        progress (bool): If True, displays a progress bar of the download to stderr
+    """
+    return _resnet('resnet34', BasicBlock, [3, 4, 6, 3], pretrained, progress,
+                   **kwargs)
+
+
+def resnet50(pretrained='None', progress=True, **kwargs):
     r"""ResNet-50 model from
     `"Deep Residual Learning for Image Recognition" <https://arxiv.org/pdf/1512.03385.pdf>`_
 
@@ -265,7 +281,7 @@ def resnet50(pretrained=False, progress=True, **kwargs):
                    **kwargs)
 
 
-def resnet152(pretrained=False, progress= True, **kwargs):
+def resnet152(pretrained='None', progress=True, **kwargs):
     r"""ResNet-152 model from
     `"Deep Residual Learning for Image Recognition" <https://arxiv.org/pdf/1512.03385.pdf>`_.
     Args:
@@ -274,3 +290,11 @@ def resnet152(pretrained=False, progress= True, **kwargs):
     """
     return _resnet('resnet152', Bottleneck, [3, 8, 36, 3], pretrained, progress,
                    **kwargs)
+
+
+model_dict = {
+    'resnet18': resnet18,
+    'resnet34': resnet34,
+    'resnet50': resnet50,
+    'resnet152': resnet152,
+}

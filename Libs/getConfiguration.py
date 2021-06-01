@@ -2,9 +2,12 @@ import yaml
 import os
 
 """
-Utils to read and change the configuration parameters.
+Using a DCT-driven Loss in Attention-based Knowledge-Distillation for Scene Recognition
 
-Developed by Alejandro Lopez-Cifuentes.
+getConfiguration.py
+Utils to read and update CONFIG files
+
+Fully developed by Anonymous Code Author.
 """
 
 
@@ -57,6 +60,8 @@ def getConfiguration(args):
         args.Architecture = default_CONFIG['DEFAULT']['ARCHITECTURE']
     if args.Training is None:
         args.Training = default_CONFIG['DEFAULT']['TRAINING']
+    if args.Distillation is None:
+        args.Distillation = default_CONFIG['DEFAULT']['DISTILLATION']
 
     # ----------------------------- #
     #      Dataset Configuration    #
@@ -74,6 +79,11 @@ def getConfiguration(args):
     training_CONFIG = yaml.safe_load(open(os.path.join('Config', 'Training', 'config_' + args.Training + '.yaml'), 'r'))
 
     # ----------------------------- #
+    #   Distillation Configuration  #
+    # ----------------------------- #
+    distillation_CONFIG = yaml.safe_load(open(os.path.join('Config', 'Distillation', 'config_' + args.Distillation + '.yaml'), 'r'))
+
+    # ----------------------------- #
     #     Configuration Update      #
     # ----------------------------- #
     # In case there is a configuration update, update configuration
@@ -86,6 +96,7 @@ def getConfiguration(args):
             dataset_CONFIG= updateConfig(dataset_CONFIG, new_key, new_value)
             architecture_CONFIG = updateConfig(architecture_CONFIG, new_key, new_value)
             training_CONFIG = updateConfig(training_CONFIG, new_key, new_value)
+            distillation_CONFIG = updateConfig(distillation_CONFIG, new_key, new_value)
 
     # ----------------------------- #
     #      Full Configuration       #
@@ -94,8 +105,9 @@ def getConfiguration(args):
     CONFIG.update(dataset_CONFIG)
     CONFIG.update(architecture_CONFIG)
     CONFIG.update(training_CONFIG)
+    CONFIG.update(distillation_CONFIG)
 
-    return CONFIG, dataset_CONFIG, architecture_CONFIG, training_CONFIG
+    return CONFIG, dataset_CONFIG, architecture_CONFIG, training_CONFIG, distillation_CONFIG
 
 
 def getValidationConfiguration(Model, ResultsPath='Results'):
@@ -116,27 +128,8 @@ def getValidationConfiguration(Model, ResultsPath='Results'):
     # Extract only config files
     config_files = [s for s in folder_files if "config_" in s]
 
-    # ----------------------------- #
-    #        Configuration 1        #
-    # ----------------------------- #
-    CONFIG1 = yaml.safe_load(open(os.path.join(Path, config_files[0]), 'r'))
-
-    # ----------------------------- #
-    #        Configuration 2        #
-    # ----------------------------- #
-    CONFIG2 = yaml.safe_load(open(os.path.join(Path, config_files[1]), 'r'))
-
-    # ----------------------------- #
-    #        Configuration 3        #
-    # ----------------------------- #
-    CONFIG3 = yaml.safe_load(open(os.path.join(Path, config_files[2]), 'r'))
-
-    # ----------------------------- #
-    #      Full Configuration       #
-    # ----------------------------- #
     CONFIG = dict()
-    CONFIG.update(CONFIG1)
-    CONFIG.update(CONFIG2)
-    CONFIG.update(CONFIG3)
+    for c in config_files:
+        CONFIG.update(yaml.safe_load(open(os.path.join(Path, c), 'r')))
 
     return CONFIG

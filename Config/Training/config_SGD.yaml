@@ -1,18 +1,15 @@
 TRAINING:
-    PRINT_FREQ: 10
+    PRINT_FREQ: 50
     EPOCHS: 70
     BATCH_SIZE:
         BS_TRAIN: 128
         BS_TEST: 256
     LOSS:
         NAME: CROSS ENTROPY
-    DISTILLATION:
-#        TEACHER: None
-        TEACHER: 'Teacher ResNet50 ADE20K'
-        D_LOSS: DFT # NewL2, L2, L2Paper, Inner, MassCenter, Gaussian, Gaussian_FID
-        ALPHA: 1
-        MULTISCALE: True
-        PRED_GUIDE: False
+        BETA: 1
+    KD:
+        TEMPERATURE: 4
+        DELTA: 0
     OPTIMIZER:
         NAME: SGD
         LR: 0.1
@@ -22,7 +19,7 @@ TRAINING:
         NAME: STEP # Possibilities: STEP, WARM-UP
 
 VALIDATION:
-    PRINT_FREQ: 10
+    PRINT_FREQ: 50
     BATCH_SIZE:
         BS_TRAIN: 256
         BS_TEST: 256

@@ -5,9 +5,12 @@ import os
 import yaml
 
 """
-General utils
+Using a DCT-driven Loss in Attention-based Knowledge-Distillation for Scene Recognition
 
-Developed by Alejandro Lopez-Cifuentes.
+Utils.py
+Bunch of utils to compute things.
+
+Fully developed by Anonymous Code Author.
 """
 
 class AverageMeter(object):
@@ -33,6 +36,29 @@ class AverageMeter(object):
         # Compute STD
         a = [np.power(x - self.avg, 2) for x in self.list_val]
         self.std = np.sqrt(np.mean(a))
+
+
+class EpochMeter(object):
+    """
+    Class to store epoch lists with values. Similar to Average Meter but for epochs. It enables to use it in Precision mode or Loss Mode.
+    """
+    def __init__(self, mode=''):
+        self.mode = mode
+        self.classification = []
+        if mode.lower() == 'loss':
+            self.total = []
+            self.total_up = []
+            self.total_down = []
+            self.distill = []
+
+    def update(self, values):
+        self.classification.append(values['classification'].avg)
+
+        if self.mode.lower() == 'loss':
+            self.total.append(values['total'].avg)
+            self.total_up.append(values['total'].avg + values['total'].std)
+            self.total_down.append(values['total'].avg - values['total'].std)
+            self.distill.append(values['distillation'].avg)
 
 
 def accuracy(output, target, topk=(1,)):
@@ -65,6 +91,7 @@ def accuracy(output, target, topk=(1,)):
 
     return res
 
+
 def classAccuracy(CM):
     """
     Compute class accuracy based on a given Confusion Matrix
@@ -80,35 +107,6 @@ def classAccuracy(CM):
         class_acc.append(num_correct_pred / (num_GT + 1e-09))
 
     return class_acc
-
-
-class EpochMeter(object):
-    """
-    Class to store epoch lists with values
-    """
-    def __init__(self, mode=''):
-        self.mode = mode
-        self.classification = []
-        if mode.lower() == 'loss':
-            self.total = []
-            self.total_up = []
-            self.total_down = []
-            self.distill = []
-
-    def update(self, values):
-        self.classification.append(values['classification'].avg)
-
-        if self.mode.lower() == 'loss':
-            self.total.append(values['total'].avg)
-            self.total_up.append(values['total'].avg + values['total'].std)
-            self.total_down.append(values['total'].avg - values['total'].std)
-            self.distill.append(values['distillation'].avg)
-
-
-def get_activation(name, activation):
-    def hook(model, input, output):
-        activation[name] = output.detach()
-    return hook
 
 
 def save_checkpoint(state, is_best, path, filename='checkpoint.pth.tar'):

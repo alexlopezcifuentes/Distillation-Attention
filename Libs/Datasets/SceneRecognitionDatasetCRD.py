@@ -1,5 +1,6 @@
 import os
 import torch
+import numpy as np
 from PIL import Image
 from torchvision import transforms
 from torch.utils.data import Dataset
@@ -9,15 +10,18 @@ from torch.utils.data import Dataset
 Using a DCT-driven Loss in Attention-based Knowledge-Distillation for Scene Recognition
 
 SceneRecognitionDataset.py
-Python file to create the SceneRecogntionDataset class. This is the class used for all the three Scene
-Recognition Datasets (ADE20K, SUN397, MIT97)
+Python file to create the SceneRecogntionDatasetCRD class. This is the class used for all the three Scene
+Recognition Datasets (ADE20K, SUN397, MIT97) when CRD is used.
 
-Fully developed by Anonymous Code Author.
+It is itented to be a combination from the SceneRecogntionDataset class and the original CIFAR 10 implementation. 
+For more details refer to the original implementation by the original author
+https://github.com/HobbitLong/RepDistiller
+
+Partially developed by Anonymous Code Author.
 """
 
-
-class SceneRecognitionDataset(Dataset):
-    """Class for Scene Recogntion dataset."""
+class SceneRecognitionDatasetCRD(Dataset):
+    """Class for ADE20K dataset."""
 
     def decodeADE20K(self, filenames_file):
         with open(filenames_file) as class_file:
@@ -47,15 +51,16 @@ class SceneRecognitionDataset(Dataset):
         """
         Intialiaze dataset
         :param CONFIG: Configuration file
+        :param root_dir: Root dir of data
         :param set: Set that is used
-        :param mode: Mode to use the set, either train or val.
-        :param tencrops: Boolean to use or not ten crop evaluation. Ten Crop evaluation is not used by default on this paper.
+        :param mode: Mode to use the set, either train or val
+        :param tencrops: Boolean to use or not ten crop evaluation
         """
-
-        # Parameters
+        # Extract main path and set (Train or Val)
         self.image_dir = CONFIG['DATASET']['ROOT']
         self.set = set.lower()
         self.mode = mode.lower()
+        # Set boolean variable of ten crops for validation
         self.ten_crop = tencrops
 
         # Decode dataset scene categories
@@ -74,7 +79,6 @@ class SceneRecognitionDataset(Dataset):
         self.labelsindex = list()
         filenames_file = os.path.join(self.image_dir, self.set + ".txt")
 
-        # Each dataset has its own decoding function
         if CONFIG['DATASET']['NAME'] == 'ADE20K':
             self.decodeADE20K(filenames_file)
         elif CONFIG['DATASET']['NAME'] == 'MIT67':
@@ -118,6 +122,34 @@ class SceneRecognitionDataset(Dataset):
                     transforms.Lambda(lambda crops: torch.stack([transforms.Normalize(self.mean, self.STD)(crop) for crop in crops])),
                 ])
 
+        # ----------------------------- #
+        #           CRD Stuff           #
+        # ----------------------------- #
+        self.k = CONFIG['DISTILLATION']['K']
+
+        # List cls_positive of num_classes elements
+        # Get the samples for each class. Class[0] = [35, 45, 69]
+        self.cls_positive = [[] for i in range(self.nclasses)]
+        for i in range(self.nclasses):
+            self.cls_positive[self.labelsindex[i]].append(i)
+
+        # List cls_negative of num_classes elements
+        # For each class, list of samples not corresponding to it.
+        self.cls_negative = [[] for i in range(self.nclasses)]
+        for i in range(self.nclasses):
+            for j in range(self.nclasses):
+                if j == i:
+                    continue
+                self.cls_negative[i].extend(self.cls_positive[j])
+
+        # Convert the list to arrays
+        self.cls_positive = [np.asarray(self.cls_positive[i]) for i in range(self.nclasses)]
+        self.cls_negative = [np.asarray(self.cls_negative[i]) for i in range(self.nclasses)]
+
+        # Again convert the list to array
+        self.cls_positive = np.asarray(self.cls_positive)
+        self.cls_negative = np.asarray(self.cls_negative)
+
     def __len__(self):
         """
         Function to get the size of the dataset
@@ -126,11 +158,9 @@ class SceneRecognitionDataset(Dataset):
         return len(self.filenames)
 
     def __getitem__(self, idx):
-        '''
-        Get item function
-        :param idx: Index of the sample
-        :return: Dictionary containing the image and the label
-        '''
+        """
+
+        """
 
         # Get RGB image path and load it
         img_name = os.path.join(self.image_dir, self.set, (self.filenames[idx] + ".jpg"))
@@ -140,10 +170,21 @@ class SceneRecognitionDataset(Dataset):
         if img.mode is not "RGB":
             img = img.convert("RGB")
 
-        # Apply defined transformations
         img = self.transform(img)
 
-        # Create dictionary with the image and the label
-        self.sample = {'Images': img, 'Labels': self.classes.index(self.labels[idx])}
+        label = self.classes.index(self.labels[idx])
 
-        return self.sample
+        # Create dictionary
+        sample = {'Images': img, 'Labels': label}
+
+        # CRD Stuff
+        pos_idx = idx
+        replace = True if self.k > len(self.cls_negative[label]) else False
+        # Select randomly "k" elements from all the negative samples for class "target"
+        neg_idx = np.random.choice(self.cls_negative[label], self.k, replace=replace)
+        sample_idx = np.hstack((np.asarray([pos_idx]), neg_idx))
+
+        crd_info = {'Idx': idx, 'Sample Idx': sample_idx}
+        sample.update(crd_info)
+
+        return sample

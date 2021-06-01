@@ -9,20 +9,28 @@ import os
 import torch.utils.data
 import numpy as np
 import shutil
-import Utils as utils
 from getConfiguration import getValidationConfiguration
 from SceneRecognitionDataset import SceneRecognitionDataset
 import resnet
+import mobilenetv2
 import pickle
 
 """
-Script to extract Class Activation Maps from EPIC Kitchens Dataset
-given a trained Action Recognition Model
+Using a DCT-driven Loss in Attention-based Knowledge-Distillation for Scene Recognition
 
+extractAMs.py
+Python file to extract Activation Maps for the models. It has to be fed with the Model path.
+Consider changing the parameter 'n_images2save' to save more or less Activation Maps.
+Consider using after 'visualizeAMs.py' to compare the obtained Activation Maps.
+
+Fully developed by Anonymous Code Author.
 """
 
 # Definition of arguments. The model path is necessary.
 USE_CUDA = torch.cuda.is_available()
+
+# Number of AMs to save. Change this value to save more or less images.
+n_images2save = 600
 
 parser = argparse.ArgumentParser(description='CAMs Extraction')
 parser.add_argument('--Model', metavar='DIR', help='Folder to be evaluated', required=True)
@@ -64,10 +72,14 @@ dataset_nclasses = valDataset.nclasses
 # ----------------------------- #
 
 # Given the configuration file build the desired CNN network
-if CONFIG['MODEL']['ARCH'].lower() == 'resnet18':
-    model = resnet.resnet18(pretrained=False, num_classes=CONFIG['DATASET']['N_CLASSES'], multiscale=True)
-elif CONFIG['MODEL']['ARCH'].lower() == 'resnet50':
-    model = resnet.resnet50(pretrained=False, num_classes=CONFIG['DATASET']['N_CLASSES'], multiscale=True)
+if CONFIG['MODEL']['ARCH'].lower() == 'mobilenetv2':
+    model = mobilenetv2.mobilenet_v2(pretrained=CONFIG['MODEL']['PRETRAINED'],
+                                     num_classes=CONFIG['DATASET']['N_CLASSES'],
+                                     multiscale=CONFIG['DISTILLATION']['MULTISCALE'])
+else:
+    model = resnet.model_dict[CONFIG['MODEL']['ARCH'].lower()](pretrained=CONFIG['MODEL']['PRETRAINED'],
+                                                               num_classes=CONFIG['DATASET']['N_CLASSES'],
+                                                               multiscale=CONFIG['DISTILLATION']['MULTISCALE'])
 
 # Extract model parameters
 model_parameters = filter(lambda p: p.requires_grad, model.parameters())
@@ -98,7 +110,9 @@ else:
     exit('Model ' + completePath + ' was not found.')
 
 
-n_images2save = 600
+# ----------------------------- #
+#          AMs Saving           #
+# ----------------------------- #
 
 print('Saving {} AMs'.format(n_images2save))
 
@@ -112,11 +126,12 @@ with torch.no_grad():
 
         # CNN Forward
         output, features_ms = model(images)
+        features_ms = features_ms[:-1]
 
         # Loop over all the multi scale AMs
         for level, features in enumerate(features_ms):
 
-            saved_images = j * CONFIG['VALIDATION']['BATCH_SIZE']['BS_TEST']
+            saved_images = j * int(CONFIG['VALIDATION']['BATCH_SIZE']['BS_TEST'])
 
             saving_path = os.path.join(ResultsPath, 'CAMs', 'Level ' + str(level))
             if not os.path.isdir(saving_path):

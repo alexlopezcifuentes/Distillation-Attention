@@ -1,0 +1,10 @@
+DISTILLATION:
+    TEACHER: 'Teacher ResNet50 ADE20K' # Options, Path or None
+    D_LOSS: CRD
+    ALPHA: 0.8
+    MULTISCALE: True
+    K: 16384
+    T: 0.07
+    M: 0.5
+    FEAT_DIM: 128
+

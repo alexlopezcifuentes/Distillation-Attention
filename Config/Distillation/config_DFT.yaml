@@ -1,0 +1,6 @@
+DISTILLATION:
+    TEACHER: 'Teacher ResNet50 ADE20K' # Options, Path or None
+    D_LOSS: DFT
+    ALPHA: 1
+    MULTISCALE: True
+    PRED_GUIDE: True

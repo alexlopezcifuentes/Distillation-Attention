@@ -9,27 +9,25 @@ import torch.nn as nn
 import torch.nn.parallel
 import torch.optim
 import torch.utils.data
-import datetime
 from sklearn.metrics import confusion_matrix
 import numpy as np
-import shutil
 import yaml
 import Utils as utils
 from getConfiguration import getValidationConfiguration
 from SceneRecognitionDataset import SceneRecognitionDataset
 import matplotlib.pyplot as plt
 import resnet
+import mobilenetv2
 import pickle
 
 
 """
-Video action classification evaluation code.
+Using a DCT-driven Loss in Attention-based Knowledge-Distillation for Scene Recognition
 
-Inputs a model and outputs video action classification metrics.
+evaluateCNNs.py
+Python file to evaluate the models. It has to be fed with the Model path.
 
-It can output also Class Activation Maps for images
-
-Fully developed by Alejandro Lopez-Cifuentes.
+Fully developed by Anonymous Code Author.
 """
 
 # Definition of arguments. All of them are optional. If no configurations are provided the selected in
@@ -105,8 +103,6 @@ def validate(val_loader, model):
             pred = torch.argmax(output, dim=1)
             pred_list.extend(pred.cpu())
 
-            # sq_index_list.extend([int(i) for i in sq_index])
-
             # Save Ground-Truth
             GT_list.extend(labels.cpu())
 
@@ -151,9 +147,6 @@ USE_CUDA = torch.cuda.is_available()
 args = parser.parse_args()
 CONFIG = getValidationConfiguration(args.Model)
 
-# print('The following configuration is used for the validation')
-# print(yaml.dump(CONFIG, allow_unicode=True, default_flow_style=False))
-
 # Initialize best precision
 best_prec = 0
 
@@ -164,17 +157,15 @@ print('-' * 65)
 # ----------------------------- #
 #           Networks            #
 # ----------------------------- #
-
 # Given the configuration file build the desired CNN network
-if CONFIG['MODEL']['ARCH'].lower() == 'resnet18':
-    model = resnet.resnet18(pretrained=False, num_classes=CONFIG['DATASET']['N_CLASSES'])
-elif CONFIG['MODEL']['ARCH'].lower() == 'resnet50':
-    model = resnet.resnet50(pretrained=False, num_classes=CONFIG['DATASET']['N_CLASSES'])
-elif CONFIG['MODEL']['ARCH'].lower() == 'resnet152':
-    model = resnet.resnet152(pretrained=False, num_classes=CONFIG['DATASET']['N_CLASSES'])
+if CONFIG['MODEL']['ARCH'].lower() == 'mobilenetv2':
+    model = mobilenetv2.mobilenet_v2(pretrained=CONFIG['MODEL']['PRETRAINED'],
+                                     num_classes=CONFIG['DATASET']['N_CLASSES'],
+                                     multiscale=CONFIG['DISTILLATION']['MULTISCALE'])
 else:
-    print('CNN Architecture specified does not exit.')
-    exit()
+    model = resnet.model_dict[CONFIG['MODEL']['ARCH'].lower()](pretrained=CONFIG['MODEL']['PRETRAINED'],
+                                                               num_classes=CONFIG['DATASET']['N_CLASSES'],
+                                                               multiscale=CONFIG['DISTILLATION']['MULTISCALE'])
 
 # Extract model parameters
 model_parameters = filter(lambda p: p.requires_grad, model.parameters())
@@ -221,8 +212,6 @@ val_loader = torch.utils.data.DataLoader(valDataset, batch_size=int(CONFIG['VALI
 
 
 dataset_nclasses = valDataset.nclasses
-
-# HistVerbClasses = np.asarray(trainDataset.HistVerbClasses) / np.max(np.asarray(trainDataset.HistVerbClasses))
 
 
 # ----------------------------- #

@@ -1,43 +1,61 @@
 # This file should be executed from terminal in Folder 'Scripts' with the following command:
-# source Run_Tests.sh
+# source Run_Train.sh
 
 #!/bin/bash
 
 cd ..
 chmod +x trainCNNs.py
 
-# Train Baselines
-#python trainCNNs.py --Architecture ResNet152 --Dataset MIT67 --Options TEACHER=None LR=0.01 BS_TRAIN=55 LR_DECAY=15 COMMENTS='Teacher training MIT67'
-#python trainCNNs.py --Architecture ResNet152 --Dataset MIT67 --Options TEACHER=None LR=0.01 BS_TRAIN=55 LR_DECAY=15 COMMENTS='Teacher training MIT67'
-#python trainCNNs.py --Architecture ResNet152 --Dataset SUN397 --Options TEACHER=None LR=0.01 BS_TRAIN=55 LR_DECAY=15 COMMENTS='Teacher training SUN397'
+# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- #
+#                                                                                                                                                                        #
+#                                                                          TRAINING SCRIPTS                                                                              #
+#                                                                                                                                                                        #
+# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- #
 
-#python trainCNNs.py --Architecture ResNet50 --Dataset MIT67 --Options TEACHER=None LR='0.01' LR_DECAY=15 COMMENTS='Teacher training MIT67'
-#python trainCNNs.py --Architecture ResNet50 --Dataset SUN397 --Options TEACHER=None LR='0.01' LR_DECAY=15 COMMENTS='Teacher training SUN397'
+# Parameters
+# ALPHA -> Weight for Distill Losses
+# BETA -> Weight for regular CE
+# DELTA -> Weight for original KD
+# Example script are given for the ADE20K. Changing the dataset parameter is enough to train models for the other datasets.
 
-#python trainCNNs.py --Architecture ResNet18 --Options PRETRAINED=False TEACHER=None LR='0.01' LR_DECAY=15 COMMENTS='Baseline training from scratch (no imagenet)'
-#python trainCNNs.py --Architecture ResNet18 --Dataset ADE20K --Options PRETRAINED='ImageNet' TEACHER=None LR='0.1' LR_DECAY=25 COMMENTS='Baseline training from imagenet. Decay 25'
+# ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- #
+#                                                                              TEACHERS                                                                                   #
+# ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- #
 
-#python trainCNNs.py --Architecture ResNet18 --Dataset MIT67 --Options TEACHER=None LR='0.1' LR_DECAY=25 COMMENTS='Baseline training from scratch MIT67. LR 0.1'
-#python trainCNNs.py --Architecture ResNet18 --Dataset SUN397 --Options TEACHER=None LR='0.1' LR_DECAY=25 COMMENTS='Baseline training from scratch SUN397. LR 0.1'
+# ResNet50
+python trainCNNs.py --Architecture ResNet50  --Dataset ADE20K --Distillation None --Options COMMENTS='ResNet50 Teacher training'
+# ResNet152
+python trainCNNs.py --Architecture ResNet152 --Dataset ADE20K --Distillation None --Options COMMENTS='ResNet152 Teacher training'
 
-python trainCNNs.py --Architecture ResNet152 --Dataset ADE20K --Options TEACHER=None LR=0.01 BS_TRAIN=55 LR_DECAY=15 COMMENTS='Teacher R152 training ADE20K'
-#python trainCNNs.py --Architecture ResNet152 --Dataset MIT67 --Options TEACHER=None LR=0.01 BS_TRAIN=55 LR_DECAY=15 COMMENTS='Teacher training MIT67'
-#python trainCNNs.py --Architecture ResNet152 --Dataset SUN397 --Options TEACHER=None LR=0.01 BS_TRAIN=55 LR_DECAY=15 COMMENTS='Teacher training SUN397'
+# ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- #
+#                                                                              BASELINES                                                                                  #
+# ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- #
+
+# ResNet18
+python trainCNNs.py --Architecture ResNet18    --Dataset ADE20K --Distillation None --Options COMMENTS='ResNet18 Baseline training'
+# ResNet34
+python trainCNNs.py --Architecture ResNet34    --Dataset ADE20K --Distillation None --Options COMMENTS='ResNet34 Baseline training'
+# MobileNetV2
+python trainCNNs.py --Architecture MobileNetV2 --Dataset ADE20K --Distillation None --Options COMMENTS='ResNet34 Baseline training'
 
 
-# NewL2 Training
-#python trainCNNs.py --Options D_LOSS=NewL2 ALPHA=0.5 COMMENTS='Multiscale New L2 with alpha 0.5'
+# ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- #
+#                                                                         KNOWLEDGE DISTILLATION                                                                          #
+# ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- #
 
+# Knowledge Distillation Method
+python trainCNNs.py --Architecture ResNet18    --Dataset ADE20K --Distillation DFT --Options TEACHER='Teacher ResNet50 ADE20K'  COMMENTS='Proposed DCT approach T:R50 S:R18'
+python trainCNNs.py --Architecture ResNet34    --Dataset ADE20K --Distillation DFT --Options TEACHER='Teacher ResNet152 ADE20K' COMMENTS='Proposed DCT approach T:R152 S:R34'
+python trainCNNs.py --Architecture MobileNetV2 --Dataset ADE20K --Distillation DFT --Options TEACHER='Teacher ResNet50 ADE20K'  COMMENTS='Proposed DCT approach T:R50 S:MN2'
 
-# DFT Training
-python trainCNNs.py --Dataset ADE20K --Options PRETRAINED='ImageNet' D_LOSS=DFT ALPHA=1 COMMENTS='DFT with alpha 1 and LR 0.1. ImageNet pretraining'
-python trainCNNs.py --Dataset ADE20K --Options D_LOSS=DFT ALPHA=1 COMMENTS='DFT with alpha 1 and LR 0.1'
-#python trainCNNs.py --Dataset ADE20K --Options D_LOSS=DFT ALPHA=1 PRED_GUIDE=True COMMENTS='DFT with alpha 1 and LR 0.1. Using predictions from teacher to guide distill.'
+# Original Hinton KD Method. Is obtained with Alpha=1, Beta=0.1 and Delta=0
+python trainCNNs.py --Architecture ResNet18    --Dataset ADE20K --Distillation KD --Options TEACHER='Teacher ResNet50 ADE20K'  BETA=0.1 COMMENTS='Original KD T:R50 S:R18'
+python trainCNNs.py --Architecture ResNet34    --Dataset ADE20K --Distillation KD --Options TEACHER='Teacher ResNet152 ADE20K' BETA=0.1 COMMENTS='Original KD T:R152 S:R34'
+python trainCNNs.py --Architecture MobileNetV2 --Dataset ADE20K --Distillation KD --Options TEACHER='Teacher ResNet50 ADE20K'  BETA=0.1 COMMENTS='Original KD T:R50 S:MN2'
 
-
-python trainCNNs.py --Dataset MIT67  --Options TEACHER='Teacher ResNet50 MIT67' LR=0.1 D_LOSS=DFT ALPHA=1 COMMENTS='MIT67 DFT with alpha 1 and LR 0.1'
-python trainCNNs.py --Dataset SUN397 --Options TEACHER='Teacher ResNet50 SUN397' LR=0.1 D_LOSS=DFT ALPHA=1 COMMENTS='SUN397 DFT with alpha 1 and LR 0.1'
-python trainCNNs.py --Dataset MIT67  --Options TEACHER='Teacher ResNet50 MIT67' LR=0.01 D_LOSS=DFT ALPHA=1 COMMENTS='MIT67 DFT with alpha 1 and LR 0.01'
-python trainCNNs.py --Dataset SUN397 --Options TEACHER='Teacher ResNet50 SUN397' LR=0.01 D_LOSS=DFT ALPHA=1 COMMENTS='SUN397 DFT with alpha 1 and LR 0.01'
+# Knowledge Distillation Method + Original Hinton KD Method. It is obtained with Alpha=1, Beta=0.1 and Delta=1
+python trainCNNs.py --Architecture ResNet18    --Dataset ADE20K --Distillation DFT --Options TEACHER='Teacher ResNet50 ADE20K'  DELTA=1 BETA=0.1 COMMENTS='Proposed DFT+KD approach T:R50 S:R18'
+python trainCNNs.py --Architecture ResNet34    --Dataset ADE20K --Distillation DFT --Options TEACHER='Teacher ResNet152 ADE20K' DELTA=1 BETA=0.1 COMMENTS='Proposed DFT+KD approach T:R152 S:R34'
+python trainCNNs.py --Architecture MobileNetV2 --Dataset ADE20K --Distillation DFT --Options TEACHER='Teacher ResNet50 ADE20K'  DELTA=1 BETA=0.1 COMMENTS='Proposed DFT+KD approach T:R50 S:MN2'
 
 

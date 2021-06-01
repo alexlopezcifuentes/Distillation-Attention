@@ -8,9 +8,12 @@ import pickle
 import torchvision
 
 """
-General Plotting Utils to represent and save variety of things
+Using a DCT-driven Loss in Attention-based Knowledge-Distillation for Scene Recognition
 
-Developed by Alejandro Lopez-Cifuentes.
+PlottingUtils.py
+Bunch of utils to plot things.
+
+Fully developed by Anonymous Code Author.
 """
 
 def plotDatasetHistograms(classes, hist, path, set = '', classtype='', save=True):
@@ -137,7 +140,7 @@ def plotTrainingResults(train_losses, val_losses, train_accuracies, val_accuraci
         # Summary Images
         fig, axs = plt.subplots(4, sharex=True)
         fig.set_size_inches(6, 10)
-        fig.suptitle(CONFIG['MODEL']['ARCH'] + ' ' + CONFIG['DATASET']['NAME'])
+        fig.suptitle(CONFIG['MODEL']['ARCH'] + ' ' + CONFIG['DATASET']['NAME'] + ' ' + CONFIG['DISTILLATION']['D_LOSS'])
         axs[0].plot(train_losses.total, 'r', label='Training')
         axs[0].plot(val_losses.total, 'b', label='Validation')
         axs[0].fill_between(x, train_losses.total_down, train_losses.total_up, alpha=0.2, color='r')
@@ -202,6 +205,15 @@ def plotTrainingResults(train_losses, val_losses, train_accuracies, val_accuraci
 
 
 def getActivationMap(features, RGBbatch=None, visualize=True, resize=True, normalization='none'):
+    """
+    Funtion to get the Activation Maps from a set of features and blend them with the original RGB Image
+    :param feature_conv: Feature tensor
+    :param RGBbatch: RGB tensor from where the features have been extracted. We only need the shape
+    :param visualize: Boolean variable that enables the display
+    :param resize: Resize size if RGBbatch is None.
+    :param normalization: Normalizacion to be used in the Activation Maps.
+    :return:
+    """
 
     if visualize and RGBbatch is None:
         exit()
@@ -235,12 +247,15 @@ def getActivationMap(features, RGBbatch=None, visualize=True, resize=True, norma
 
 
 def returnAM(feature_conv, RGBbatch=None, resize=True, resizeSize=None, normalization=None):
-    """
-    Compute the CAM given features
-    :param feature_conv: features of shape [BatchSize, Chns, T, H, W]
-    :param RGBbatch: Images of shape [BatchSize, Chns, T, H, W]
+    '''
+    Funtion to, given a feature tensor, compute the Activation Map.
+    :param feature_conv: Feature tensor
+    :param RGBbatch: RGB tensor from where the features have been extracted. We only need the shape
+    :param resize: Boolean variable to resize the Activation Map or not
+    :param resizeSize: Set the resize size desired, if RGBBatch is none and we want to resize.
+    :param normalization: Normalization to be applied in the Activation Map
     :return:
-    """
+    '''
 
     # Obtain sizes from the features
     bs, nc, h, w = feature_conv.shape
@@ -281,6 +296,5 @@ def returnAM(feature_conv, RGBbatch=None, resize=True, resizeSize=None, normaliz
         cam = cam - min[:, None]
         cam = cam / max[:, None]
         cam = cam.view(bs, h, w)
-
 
     return cam
