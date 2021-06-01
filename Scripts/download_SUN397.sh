@@ -1,14 +1,19 @@
 #!/bin/bash
 
-DATASET_DIR=$1
+echo ========================================================================
+echo "Starting to download SUN397 Dataset..."
+echo ========================================================================
 
-wget  -O $DATASET_DIR/SUN.zip http://www-vpu.eps.uam.es/publications/SemanticAwareSceneRecognition/SUN397.zip
+# Download original zip file
+#wget -nc -P ./Data/SUN397 http://www-vpu.eps.uam.es/publications/SemanticAwareSceneRecognition/SUN397.zip
 
-unzip -n $DATASET_DIR/SUN.zip -d $DATASET_DIR
+# Unzip file
+unzip -n ./Data/SUN397/SUN397.zip -d ./Data/SUN397
 
-rm $DATASET_DIR/SUN.zip
+# Remove zip file
+rm ./Data/SUN397/SUN397.zip
 
 echo ========================================================================
-echo "Set the path below to \"ROOT:\" in the config file from Config/config_SUN397.yaml:"
-echo -e "\033[32m $DATASET_DIR \033[00m"
+echo "SUN397 Dataset ready to use!"
 echo ========================================================================
+

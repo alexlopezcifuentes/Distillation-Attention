@@ -1,18 +1,24 @@
 #!/bin/bash
 
-DATASET_DIR=$1
+echo ========================================================================
+echo "Starting to download ADE20K Dataset..."
+echo ========================================================================
 
-wget -nc -P $DATASET_DIR http://data.csail.mit.edu/places/ADEchallenge/ADEChallengeData2016.zip
+# Download original zip file
+wget -nc -P ./Data/ADEChallengeData2016 http://data.csail.mit.edu/places/ADEchallenge/ADEChallengeData2016.zip
 
-unzip -n $DATASET_DIR/ADEChallengeData2016.zip -d $DATASET_DIR
+# Unzip file
+unzip -n ./Data/ADEChallengeData2016/ADEChallengeData2016.zip -d ./Data/ADEChallengeData2016
 
-rm $DATASET_DIR/ADEChallengeData2016.zip
 
-mv  -v $DATASET_DIR/ADEChallengeData2016/* $DATASET_DIR/
+# Move and rename training and validation folders
+mv  -v ./Data/ADEChallengeData2016/ADEChallengeData2016/images/training ./Data/ADEChallengeData2016/train
+mv  -v ./Data/ADEChallengeData2016/ADEChallengeData2016/images/validation ./Data/ADEChallengeData2016/val
 
-rm -r $DATASET_DIR/ADEChallengeData2016
+# Remove extra annotations and zip file.
+rm -r ./Data/ADEChallengeData2016/ADEChallengeData2016/
+rm ./Data/ADEChallengeData2016/ADEChallengeData2016.zip
 
 echo ========================================================================
-echo "Set the path below to \"ROOT:\" in the config file from Config/config_ADE20K.yaml:"
-echo -e "\033[32m $DATASET_DIR \033[00m"
+echo "ADE20K Dataset ready to use!"
 echo ========================================================================
