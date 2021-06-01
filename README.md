@@ -49,6 +49,7 @@ To train a teacher model(s), e.g. using ResNet-50 backbone, run this command:
 
 	$ python trainCNNs.py --Architecture ResNet50 --Dataset ADE20K --Distillation None
 >This command will train a vanilla ResNet-50 for the ADE20K dataset using the default parameters used in the paper.
+>**Note**: Models are saved in a unique folder named by the date and hour (pretty long name). We recommend changing the folder name once trained to ease their usage as Teachers.
 
 ### Baselines
 To train a baseline model(s), e.g. using ResNet-18 backbone, run this command:
@@ -64,16 +65,15 @@ To train the proposed method run this command:
 >This command will train the proposed DCT-based approach using ResNet-18 as Student backbone and `Teacher ResNet50 ADE20K` folder path as the Teacher. ADE20K dataset is used with the default parameters used in the paper.
 
 ### Changing Hyper-Parameters
-Training parameters are specified in each of the separete `Config.yaml` files from folder `Config/`.  To change them, you can either change the specific `Config.yaml` file or you can override any set of hyper-parameters with the argument `--Options` like:
+Training parameters are specified in each of the separate `Config.yaml` files from [`Config`](https://github.com/alexlopezcifuentes/Distillation-Attention/tree/main/Config) folder.  To change them, you can either change the specific `Config.yaml` file or you can override any set of hyper-parameters with the argument `--Options` like:
 	
 	$ python trainCNNs.py --Architecture X --Dataset X --Distillation DFT --Options TEACHER='X' BS_TRAIN=50 LR=0.01 COMMENTS='Testing argument override'
+> Take a look at each configuration file to see the options. If you want to change an hyper-parameter it is likely that is coded there.
 
 ### Automatic Script
-We provide a shell script that contains the set of necesary commands to train the models from the paper in `Scripts/Run_Train.sh`. You can either check the script or run it from `Scripts/` folder with:
+We provide a shell script that contains the set of necesary commands to train the models from the paper in [`Scripts/Run_Train.sh`](https://github.com/alexlopezcifuentes/Distillation-Attention/blob/main/Scripts/Run_Train.sh). You can either check the script to inspect how the models where trained or run it from `Scripts/` folder with:
 
 	$ ./Run_Train.sh 
-
->**Note**: Models are saved in a unique folder containing the date and hour. We recommend changing the folder name once trained and changing the `TEACHER='X'` path accordingly.
 
 ## Evaluation
 
@@ -81,16 +81,15 @@ We provide a shell script that contains the set of necesary commands to train th
 Once a model is trained you can simply evaluate it with the following command:
 
 	$ python evaluateCNNs.py --Model "<ModelPath>"
+>Evaluation results will be promt in the terminal but also saved in summary files in the model's path.
 
 ### Activation Maps Extraction
-We also provide a Python script to automatically extract the activation maps for a given model from a set of layers with:
+We also provide a Python script to automatically extract the activation maps for a given model with:
 
 	$ python extractAMs.py --Model "<ModelPath>"
 
->Evaluation results will be promt in the terminal but also saved in summary files in the model's path.
-
 ### Automatic Script
-As in training, we provide and automatic shell script to ease the model evaluations in `Scripts/Run_Val.sh` that can be run with:
+As in training, we provide and automatic shell script to ease the model evaluations in [`Scripts/Run_Val.sh`](https://github.com/alexlopezcifuentes/Distillation-Attention/blob/main/Scripts/Run_Val.sh) that can be run with:
 
 	$ ./Run_Val.sh 
 
@@ -126,4 +125,4 @@ Citation
 ## Acknowledgments
 This study has been partially supported by the Spanish Government through its TEC2017-88169-R MobiNetVideo project.
 
-We want also to give a massive thank  [Yonglong Tian (HobbitLong)](https://github.com/HobbitLong) for sharing his [RepDistiller Repository](https://github.com/HobbitLong/RepDistiller) from where we took the implementations for the state-of-the-art methods. Give them a star!
+We want also to give a massive thank to  [Yonglong Tian (HobbitLong)](https://github.com/HobbitLong) for sharing his [RepDistiller Repository](https://github.com/HobbitLong/RepDistiller) from where we took the implementations for the state-of-the-art methods. Give them a star!
