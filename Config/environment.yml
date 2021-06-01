@@ -1,4 +1,4 @@
-name: VideoClassification
+name: DCTKnowledgeDistillation
 channels:
   - pytorch
   - conda-forge
