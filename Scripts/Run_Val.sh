@@ -5,8 +5,8 @@
 
 cd ..
 chmod +x evaluateCNNs.py
-chmod +x ExtractCAMs.py
-chmod +x visualizeAMs.py
+#chmod +x extractAMs.py
+#chmod +x visualizeAMs.py
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- #
 #                                                                                                                                                                        #
@@ -18,15 +18,15 @@ chmod +x visualizeAMs.py
 #                                                                              TEACHERS                                                                                  #
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- #
 
-python evaluateCNNs.py --Model "ADE20K/Teachers/Teacher 1 ResNet50 ADE20K"
-python evaluateCNNs.py --Model "ADE20K/Teachers/Teacher 1 ResNet152 ADE20K"
+python evaluateCNNs.py --Model "ADE20K/Teachers/Teacher ResNet50 ADE20K"
+python evaluateCNNs.py --Model "ADE20K/Teachers/Teacher ResNet152 ADE20K"
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- #
 #                                                                              BASELINES                                                                                 #
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- #
 
 python evaluateCNNs.py --Model "ADE20K/Baselines/Baseline 1 ResNet18 ADE20K"
-python evaluateCNNs.py --Model "ADE20K/Baselines/Baseline 1 ResNet32 ADE20K"
+python evaluateCNNs.py --Model "ADE20K/Baselines/Baseline 1 ResNet34 ADE20K"
 python evaluateCNNs.py --Model "ADE20K/Baselines/Baseline 1 MobileNetV2 ADE20K"
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- #
@@ -34,15 +34,11 @@ python evaluateCNNs.py --Model "ADE20K/Baselines/Baseline 1 MobileNetV2 ADE20K"
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- #
 
 python evaluateCNNs.py --Model "ADE20K/1 ResNet18 ADE20K DFT"
-python evaluateCNNs.py --Model "ADE20K/1 ResNet32 ADE20K DFT"
+python evaluateCNNs.py --Model "ADE20K/1 ResNet34 ADE20K DFT"
 python evaluateCNNs.py --Model "ADE20K/1 MobileNetV2 ADE20K DFT"
 
-python evaluateCNNs.py --Model "ADE20K/1 ResNet18 ADE20K KD"
-python evaluateCNNs.py --Model "ADE20K/1 ResNet32 ADE20K KD"
-python evaluateCNNs.py --Model "ADE20K/1 MobileNetV2 ADE20K KD"
-
 python evaluateCNNs.py --Model "ADE20K/1 ResNet18 ADE20K DFT+KD"
-python evaluateCNNs.py --Model "ADE20K/1 ResNet32 ADE20K DFT+KD"
+python evaluateCNNs.py --Model "ADE20K/1 ResNet34 ADE20K DFT+KD"
 python evaluateCNNs.py --Model "ADE20K/1 MobileNetV2 ADE20K DFT+KD"
 
 
