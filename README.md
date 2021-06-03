@@ -1,7 +1,7 @@
 # Using a DCT-Driven Loss in Attention-Based Knowledge-Distillation for Scene Recognition
-Official Pytorch Implementation of Using a DCT-Driven Loss in Attention-Based Knowledge-Distillation for Scene Recognition by Alejandro López-Cifuentes, Marcos Escudero-Viñolo and Jesús Bescós (In revision for NeurIPS 2021 Conference).
+Official Pytorch Implementation of Using a DCT-Driven Loss in Attention-Based Knowledge-Distillation for Scene Recognition by *Anonymous Authors* (In revision for NeurIPS 2021 Conference).
 
-FIGURE
+FIGURE OF THE PROPOSED APPROACH
 
 ## Setup
 
@@ -100,21 +100,57 @@ This Section provides a table with the results from the paper and the links to t
 
 | Method         | T: ResNet-50 <br> S: ResNet-18 | T: ResNet-152 <br> S: ResNet-34 | T: ResNet-50 <br> S: MobileNet-V2 |
 |----------------|--------------------------------|---------------------------------|-----------------------------------|
-| [Teacher](LINK)        | 58.34                          | 60.07                           | 58.34                             |
-| [Baseline](Link)       | 40.97                          | 41.63                           | 44.29                             |
+| Teacher        | [58.34](LINK)                          | [60.07](LINK)                           | [58.34](LINK)                             |
+| Baseline       | [40.97](LINK)                          | [41.63](LINK)                           | [44.29](LINK)                             |
 | AT             | 45.43                          | 44.80                           | 46.65                             |
 | PKT            | 44.59                          | 42.38                           | 46.42                             |
 | VID            | 42.09                          | 39.31                           | 43.63                             |
 | CRD            | 45.46                          | 43.06                           | 46.51                             |
 | CKD            | 46.89                          | 45.01                           | 47.30                             |
-| [**DCT (Ours)**](LINK) | **47.35**                      | **45.63**                       | **47.39**                         |
+| **DCT (Ours)** | [**47.35**](LINK)                      | [**45.63**](LINK)                       | [**47.39**](LINK)                         |
 | KD             | 50.54                          | 48.91                           | 48.37                             |
 | AT + KD        | 48.87                          | 50.70                           | 47.67                             |
 | PKT  + KD          | 49.31                          | 49.70                           | 49.43                             |
 | VID + KD           | 50.36                          | 48.99                           | 47.84                             |
 | CRD  + KD          | 48.90                          | 49.68                           | 47.88                             |
 | CKD   + KD         | 52.10                          | **53.54**                          | 49.15                             |
-| [**DCT + KD (Ours)**](LINK) | **54.25**                      | 52.68                           | **50.75**      
+| **DCT (Ours) + KD** | [**54.25**](LINK)                      | [52.68](LINK)                           | [**50.75**](LINK)      
+
+### SUN397
+
+| Method         | T: ResNet-50 <br> S: ResNet-18 | T: ResNet-152 <br> S: ResNet-34 | T: ResNet-50 <br> S: MobileNet-V2 |
+|----------------|--------------------------------|---------------------------------|-----------------------------------|
+| Teacher        | [61.69](LINK)                          | [62.56](LINK)                           | [51.59](LINK)                             |
+| Baseline       | [38.77](LINK)                          | [44.66](LINK)                           | [41.18](LINK)                             |
+| AT             | 41.82                          | 40.99                           | 38.84                             |
+| PKT            | 38.70                          | 37.70                           | 40.17                             |
+| VID            | 41.16                          | 38.16                           | 41.06                             |
+| CRD            | 44.89                          | 41.80                           | **43.56**                             |
+| **DCT (Ours)** | [**45.75**](LINK)                      | [**43.50**](LINK)                       | [43.16](LINK)                         |
+| KD             | 48.83                          | 48.26                           | 47.31                             |
+| AT + KD        | 49.69                          | 49.05                           | 46.60                             |
+| PKT  + KD          | 49.13                          | 48.08                           | 47.54                             |
+| VID + KD           | 49.26                          | 47.08                           | 46.57                             |
+| CRD  + KD          | 49.79                          | 48.39                           | 46.77                             |
+| **DCT (Ours) + KD** | [**55.15**](LINK)                      | [**50.51**](LINK)                           | [**49.25**](LINK)
+
+### MIT67
+
+| Method         | T: ResNet-50 <br> S: ResNet-18 | T: ResNet-152 <br> S: ResNet-34 | T: ResNet-50 <br> S: MobileNet-V2 |
+|----------------|--------------------------------|---------------------------------|-----------------------------------|
+| Teacher        | [77.32](LINK)                          | [78.11](LINK)                           | [77.32](LINK)                             |
+| Baseline       | [49.26](LINK)                          | [38.84](LINK)                           | [49.06](LINK)                             |
+| AT             | 51.73                          | 49.66                           | 45.13                             |
+| PKT            | 51.03                          | 46.32                           | 50.23                             |
+| VID            | 48.57                          | 44.22                           | 47.87                             |
+| CRD            | 52.19                          | 42.41                           | 50.10                             |
+| **DCT (Ours)** | [**56.32**](LINK)                      | [**52.14**](LINK)                       | [**50.42**](LINK)                         |
+| KD             | 54.87                          | 51.55                           | 56.14                             |
+| AT + KD        | 57.10                          | 53.05                           | 52.17                             |
+| PKT  + KD          | 53.83                          | 50.52                           | 53.05                             |
+| VID + KD           | 54.15                          | 51.79                           | 54.05                             |
+| CRD  + KD          | 56.11                          | 52.34                           | 55.00                             |
+| **DCT (Ours) + KD** | [**60.11**](LINK)                      | [**55.18**](LINK)                           | [**57.35**](LINK)
 
 ## Citation
 If you find this code and work useful, please consider citing:
@@ -123,6 +159,6 @@ Citation
 ```
 
 ## Acknowledgments
-This study has been partially supported by the Spanish Government through its TEC2017-88169-R MobiNetVideo project.
+This study has been partially supported by the *Anonymous* project.
 
 We want also to give a massive thank to  [Yonglong Tian (HobbitLong)](https://github.com/HobbitLong) for sharing his [RepDistiller Repository](https://github.com/HobbitLong/RepDistiller) from where we took the implementations for the state-of-the-art methods. Give them a star!

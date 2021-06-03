@@ -17,22 +17,22 @@ Fully developed by Anonymous Code Author.
 
 ResultsPath = 'Results/'
 CurvesPath = os.path.join('Files')
-Dataset = 'ADE20K'
+Dataset = 'MIT67'
 
 # Models to compare
 TeacherPath = {'Name': 'Teacher R50', 'Path': os.path.join('Teachers/Teacher ResNet50 ' + Dataset), 'Color': 'tab:blue'}
-VanillaPath = [{'Name': 'Vanilla R18', 'Path': os.path.join('Baselines/Baseline 3 ResNet18 ' + Dataset), 'Color': 'tab:orange'}]
-OursPath = [{'Name': 'DCT (Ours)', 'Path': '1 ResNet18 ' + Dataset + ' DFT', 'Color': 'tab:green'},
-            {'Name': 'DCT+KD (Ours)', 'Path': '1 ResNet18 ' + Dataset + ' DFT+KD', 'Color': 'tab:green'}]
-SoAPath = [{'Name': 'AT', 'Path': '1 ResNet18 ' + Dataset + ' AT', 'Color': 'tab:red'},
-           {'Name': 'PKT', 'Path': '1 ResNet18 ' + Dataset + ' PKT', 'Color': 'tab:purple'},
-           {'Name': 'VID', 'Path': '1 ResNet18 ' + Dataset + ' VID', 'Color': 'tab:brown'},
-           {'Name': 'CRD', 'Path': '1 ResNet18 ' + Dataset + ' CRD', 'Color': 'tab:gray'},
-           {'Name': 'Vanilla+KD', 'Path': os.path.join('1 ResNet18 ' + Dataset + ' KD'), 'Color': 'tab:orange'},
-           {'Name': 'AT+KD', 'Path': '1 ResNet18 ' + Dataset + ' AT+KD', 'Color': 'tab:red'},
-           {'Name': 'PKT+KD', 'Path': '1 ResNet18 ' + Dataset + ' PKT+KD', 'Color': 'tab:purple'},
-           {'Name': 'VID+KD', 'Path': '1 ResNet18 ' + Dataset + ' VID+KD', 'Color': 'tab:brown'},
-           {'Name': 'CRD+KD', 'Path': '1 ResNet18 ' + Dataset + ' CRD+KD', 'Color': 'tab:gray'}]
+VanillaPath = [{'Name': 'Vanilla R18', 'Path': os.path.join('Baselines/Baseline 1 ResNet18 ' + Dataset), 'Color': 'tab:orange'}]
+OursPath = [{'Name': 'DCT (Ours)',    'Path': os.path.join('Teacher ResNet50 Student ResNet18', '1 ResNet18 ' + Dataset + ' DFT'), 'Color': 'tab:green'},
+            {'Name': 'DCT+KD (Ours)', 'Path': os.path.join('Teacher ResNet50 Student ResNet18', '1 ResNet18 ' + Dataset + ' DFT+KD'), 'Color': 'tab:green'}]
+SoAPath = [{'Name': 'AT',             'Path': os.path.join('Teacher ResNet50 Student ResNet18', '1 ResNet18 ' + Dataset + ' AT'), 'Color': 'tab:red'},
+           {'Name': 'PKT',            'Path': os.path.join('Teacher ResNet50 Student ResNet18', '1 ResNet18 ' + Dataset + ' PKT'), 'Color': 'tab:purple'},
+           {'Name': 'VID',            'Path': os.path.join('Teacher ResNet50 Student ResNet18', '1 ResNet18 ' + Dataset + ' VID'), 'Color': 'tab:brown'},
+           {'Name': 'CRD',            'Path': os.path.join('Teacher ResNet50 Student ResNet18', '1 ResNet18 ' + Dataset + ' CRD'), 'Color': 'tab:gray'},
+           {'Name': 'Vanilla+KD',     'Path': os.path.join('Teacher ResNet50 Student ResNet18', '1 ResNet18 ' + Dataset + ' KD'), 'Color': 'tab:orange'},
+           {'Name': 'AT+KD',          'Path': os.path.join('Teacher ResNet50 Student ResNet18', '1 ResNet18 ' + Dataset + ' AT+KD'), 'Color': 'tab:red'},
+           {'Name': 'PKT+KD',         'Path': os.path.join('Teacher ResNet50 Student ResNet18', '1 ResNet18 ' + Dataset + ' PKT+KD'), 'Color': 'tab:purple'},
+           {'Name': 'VID+KD',         'Path': os.path.join('Teacher ResNet50 Student ResNet18', '1 ResNet18 ' + Dataset + ' VID+KD'), 'Color': 'tab:brown'},
+           {'Name': 'CRD+KD',         'Path': os.path.join('Teacher ResNet50 Student ResNet18', '1 ResNet18 ' + Dataset + ' CRD+KD'), 'Color': 'tab:gray'}]
 
 Methods = list()
 Methods.append(TeacherPath)
