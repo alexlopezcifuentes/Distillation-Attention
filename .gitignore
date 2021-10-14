@@ -5,8 +5,11 @@ Data/MITIndoor67/train
 Data/MITIndoor67/val
 Data/SUN397/train
 Data/SUN397/val
+Data/CIFAR100
 
 Results/
+
+Mapas Activacion CIFAR
 
 Comparativas/
 
