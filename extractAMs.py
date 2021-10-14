@@ -9,10 +9,12 @@ import os
 import torch.utils.data
 import numpy as np
 import shutil
+from torchvision import datasets, transforms
 from getConfiguration import getValidationConfiguration
 from SceneRecognitionDataset import SceneRecognitionDataset
 import resnet
 import mobilenetv2
+import resnetCIFAR
 import pickle
 
 """
@@ -55,15 +57,25 @@ if not os.path.isdir(os.path.join(ResultsPath, 'CAMs')):
 #            Dataset            #
 # ----------------------------- #
 
-if CONFIG['DATASET']['NAME'] == 'ADE20K' or CONFIG['DATASET']['NAME'] == 'MIT67' or CONFIG['DATASET']['NAME'] == 'SUN397':
+if CONFIG['DATASET']['NAME'] in ['ADE20K', 'MIT67', 'SUN397']:
     # valDataset = ADE20KDataset(CONFIG, set='Val', mode='Val')
     valDataset = SceneRecognitionDataset(CONFIG, set='Train', mode='Val')
+elif CONFIG['DATASET']['NAME'] in ['CIFAR100']:
+    val_transform = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize(CONFIG['DATASET']['MEAN'], CONFIG['DATASET']['STD']),
+    ])
+
+    # valDataset = datasets.CIFAR100(root=CONFIG['DATASET']['ROOT'], download=True, train=False, transform=val_transform)
+    valDataset = datasets.CIFAR100(root=CONFIG['DATASET']['ROOT'], download=True, train=True, transform=val_transform)
+
+    valDataset.nclasses = 100
 else:
     print('Dataset specified does not exit.')
     exit()
 
 val_loader = torch.utils.data.DataLoader(valDataset, batch_size=int(CONFIG['VALIDATION']['BATCH_SIZE']['BS_TEST']), shuffle=False,
-                                         num_workers=0, pin_memory=True)
+                                         num_workers=8, pin_memory=True)
 dataset_nclasses = valDataset.nclasses
 
 
@@ -76,10 +88,15 @@ if CONFIG['MODEL']['ARCH'].lower() == 'mobilenetv2':
     model = mobilenetv2.mobilenet_v2(pretrained=CONFIG['MODEL']['PRETRAINED'],
                                      num_classes=CONFIG['DATASET']['N_CLASSES'],
                                      multiscale=CONFIG['DISTILLATION']['MULTISCALE'])
-else:
-    model = resnet.model_dict[CONFIG['MODEL']['ARCH'].lower()](pretrained=CONFIG['MODEL']['PRETRAINED'],
-                                                               num_classes=CONFIG['DATASET']['N_CLASSES'],
-                                                               multiscale=CONFIG['DISTILLATION']['MULTISCALE'])
+if CONFIG['MODEL']['ARCH'].lower().find('resnet') != -1:
+    if CONFIG['MODEL']['ARCH'].lower().find('c') != -1:
+        net_name = CONFIG['MODEL']['ARCH'][:CONFIG['MODEL']['ARCH'].lower().find('c')]
+        model = resnetCIFAR.model_dict[net_name.lower()](num_classes=CONFIG['DATASET']['N_CLASSES'],
+                                                         multiscale=CONFIG['DISTILLATION']['MULTISCALE'])
+    else:
+        model = resnet.model_dict[CONFIG['MODEL']['ARCH'].lower()](pretrained=CONFIG['MODEL']['PRETRAINED'],
+                                                                   num_classes=CONFIG['DATASET']['N_CLASSES'],
+                                                                   multiscale=CONFIG['DISTILLATION']['MULTISCALE'])
 
 # Extract model parameters
 model_parameters = filter(lambda p: p.requires_grad, model.parameters())
@@ -121,8 +138,12 @@ gt_list = list()
 with torch.no_grad():
     for j, (mini_batch) in enumerate(val_loader):
         if USE_CUDA:
-            images = mini_batch['Images'].cuda()
-            labels = mini_batch['Labels'].cuda()
+            if CONFIG['DATASET']['NAME'] in ['CIFAR100']:
+                images = mini_batch[0].cuda()
+                labels = mini_batch[1].cuda()
+            else:
+                images = mini_batch['Images'].cuda()
+                labels = mini_batch['Labels'].cuda()
 
         # CNN Forward
         output, features_ms = model(images)
@@ -141,20 +162,21 @@ with torch.no_grad():
 
             # Save Images
             for i, AM in enumerate(AMs):
-                img_rgb = (GenericPlottingUtils.tensor2numpy(images[i, :], mean=valDataset.mean, STD=valDataset.STD) * 255).astype(np.uint8)
+                img_rgb = (GenericPlottingUtils.tensor2numpy(images[i, :], mean=CONFIG['DATASET']['MEAN'], STD=CONFIG['DATASET']['STD']) * 255).astype(np.uint8)
                 im_to_save = np.concatenate((img_rgb, cv2.cvtColor(AM.astype(np.uint8), cv2.COLOR_BGR2RGB)), axis=1)
 
                 GT = valDataset.classes[labels[i].item()]
                 pred = valDataset.classes[torch.argmax(output, dim=1)[i].item()]
 
-                if level == 3:
+                if level == (len(features_ms) - 1):
                     gt_list.append(GT)
                     prediction_list.append(pred)
 
-                cv2.putText(im_to_save, ("GT  : {}.".format(GT)),
-                            org=(10, 20), fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.8, color=[0, 0, 0])
-                cv2.putText(im_to_save, ("Pred: {}".format(pred)),
-                            org=(10, 40), fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.8, color=[0, 0, 0])
+                if not CONFIG['DATASET']['NAME'] in ['CIFAR100']:
+                    cv2.putText(im_to_save, ("GT  : {}.".format(GT)),
+                                org=(10, 20), fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.8, color=[0, 0, 0])
+                    cv2.putText(im_to_save, ("Pred: {}".format(pred)),
+                                org=(10, 40), fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.8, color=[0, 0, 0])
 
                 # Save Image
                 im = Image.fromarray(im_to_save)

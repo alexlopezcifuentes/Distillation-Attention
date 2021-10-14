@@ -31,13 +31,13 @@ ID = args.Model
 ResultsPath = '/home/alc/Distillation-Attention/Results/'
 
 # Dataset to be used
-Dataset = 'ADE20K'
+Dataset = 'CIFAR100'
 # Teacher to be used
-Teacher = 'Teacher ResNet50 ' + Dataset
+Teacher = 'ResNet56C ' + Dataset
 # Baseline to be used
-Baseline = 'Baseline 1 MobileNetV2 ' + Dataset
+Baseline = 'ResNet20C ' + Dataset
 # Actual Model to be used
-Student = ID + ' ResNet18 ' + Dataset + ' DFT'
+Student = os.path.join('T56C S20C', 'ID ' + ID + ' ResNet20C ' + Dataset + ' DFT')
 
 print('Comparing AMs for Teacher {}, Baseline {} and Student {}'.format(Teacher, Baseline, Student))
 
@@ -81,6 +81,11 @@ os.mkdir(SavingPathCorrections)
 os.mkdir(SavingPathIncorrect)
 os.mkdir(SavingPathOther)
 
+if Dataset == 'CIFAR100':
+    n_levels = 3
+else:
+    n_levels = 4
+
 c = 0
 for am_teacher, am_bas, am_student in zip(teacher_img_list, baseline_img_list, student_img_list):
 
@@ -91,86 +96,107 @@ for am_teacher, am_bas, am_student in zip(teacher_img_list, baseline_img_list, s
     baseline_pred = baseline_pred_list[c]
     student_pred = student_pred_list[c]
 
-    # Level 0
-    img_am_teacher_l0 = Image.open(os.path.join(TeacherPath, AMsPath, 'Level 0', am_teacher))
-    img_am_baseline_l0 = Image.open(os.path.join(BaselinePath, AMsPath, 'Level 0', am_bas))
-    img_am_student_l0 = Image.open(os.path.join(StudentPath, AMsPath, 'Level 0', am_student))
+    for level in range(n_levels):
+        img_am_teacher = Image.open(os.path.join(TeacherPath, AMsPath, 'Level ' + str(level), am_teacher))
+        img_am_baseline = Image.open(os.path.join(BaselinePath, AMsPath, 'Level ' + str(level), am_bas))
+        img_am_student = Image.open(os.path.join(StudentPath, AMsPath, 'Level ' + str(level), am_student))
 
-    # Level 1
-    img_am_teacher_l1 = Image.open(os.path.join(TeacherPath, AMsPath, 'Level 1', am_teacher))
-    img_am_baseline_l1 = Image.open(os.path.join(BaselinePath, AMsPath, 'Level 1', am_bas))
-    img_am_student_l1 = Image.open(os.path.join(StudentPath, AMsPath, 'Level 1', am_student))
+        plt.figure(1, figsize=(15, 10))
+        plt.subplot(n_levels, 3, (level*3)+1)
+        plt.imshow(img_am_teacher)
+        plt.axis('off')
+        plt.title('Teacher L0')
 
-    # Level 2
-    img_am_teacher_l2 = Image.open(os.path.join(TeacherPath, AMsPath, 'Level 2', am_teacher))
-    img_am_baseline_l2 = Image.open(os.path.join(BaselinePath, AMsPath, 'Level 2', am_bas))
-    img_am_student_l2 = Image.open(os.path.join(StudentPath, AMsPath, 'Level 2', am_student))
+        plt.subplot(n_levels, 3, (level*3)+2)
+        plt.imshow(img_am_baseline)
+        plt.axis('off')
+        plt.title('Baseline L0')
 
-    # Level 3
-    img_am_teacher_l3 = Image.open(os.path.join(TeacherPath, AMsPath, 'Level 3', am_teacher))
-    img_am_baseline_l3 = Image.open(os.path.join(BaselinePath, AMsPath, 'Level 3', am_bas))
-    img_am_student_l3 = Image.open(os.path.join(StudentPath, AMsPath, 'Level 3', am_student))
-
-    plt.figure(1, figsize=(15, 10))
-    plt.subplot(4, 3, 1)
-    plt.imshow(img_am_teacher_l0)
-    plt.axis('off')
-    plt.title('Teacher L0')
-
-    plt.subplot(4, 3, 2)
-    plt.imshow(img_am_baseline_l0)
-    plt.axis('off')
-    plt.title('Baseline L0')
-
-    plt.subplot(4, 3, 3)
-    plt.imshow(img_am_student_l0)
-    plt.axis('off')
-    plt.title('Student L0')
-
-    plt.subplot(4, 3, 4)
-    plt.imshow(img_am_teacher_l1)
-    plt.axis('off')
-    plt.title('Teacher L1')
-
-    plt.subplot(4, 3, 5)
-    plt.imshow(img_am_baseline_l1)
-    plt.axis('off')
-    plt.title('Baseline L1')
-
-    plt.subplot(4, 3, 6)
-    plt.imshow(img_am_student_l1)
-    plt.axis('off')
-    plt.title('Student L1')
-
-    plt.subplot(4, 3, 7)
-    plt.imshow(img_am_teacher_l2)
-    plt.axis('off')
-    plt.title('Teacher L2')
-
-    plt.subplot(4, 3, 8)
-    plt.imshow(img_am_baseline_l2)
-    plt.axis('off')
-    plt.title('Baseline L2')
-
-    plt.subplot(4, 3, 9)
-    plt.imshow(img_am_student_l2)
-    plt.axis('off')
-    plt.title('Student L2')
-
-    plt.subplot(4, 3, 10)
-    plt.imshow(img_am_teacher_l3)
-    plt.axis('off')
-    plt.title('Teacher L3')
-
-    plt.subplot(4, 3, 11)
-    plt.imshow(img_am_baseline_l3)
-    plt.axis('off')
-    plt.title('Baseline L3')
-
-    plt.subplot(4, 3, 12)
-    plt.imshow(img_am_student_l3)
-    plt.axis('off')
-    plt.title('Student L3')
+        plt.subplot(n_levels, 3, (level*3)+3)
+        plt.imshow(img_am_student)
+        plt.axis('off')
+        plt.title('Student L0')
+    #
+    # # Level 0
+    # img_am_teacher_l0 = Image.open(os.path.join(TeacherPath, AMsPath, 'Level 0', am_teacher))
+    # img_am_baseline_l0 = Image.open(os.path.join(BaselinePath, AMsPath, 'Level 0', am_bas))
+    # img_am_student_l0 = Image.open(os.path.join(StudentPath, AMsPath, 'Level 0', am_student))
+    #
+    # # Level 1
+    # img_am_teacher_l1 = Image.open(os.path.join(TeacherPath, AMsPath, 'Level 1', am_teacher))
+    # img_am_baseline_l1 = Image.open(os.path.join(BaselinePath, AMsPath, 'Level 1', am_bas))
+    # img_am_student_l1 = Image.open(os.path.join(StudentPath, AMsPath, 'Level 1', am_student))
+    #
+    # # Level 2
+    # img_am_teacher_l2 = Image.open(os.path.join(TeacherPath, AMsPath, 'Level 2', am_teacher))
+    # img_am_baseline_l2 = Image.open(os.path.join(BaselinePath, AMsPath, 'Level 2', am_bas))
+    # img_am_student_l2 = Image.open(os.path.join(StudentPath, AMsPath, 'Level 2', am_student))
+    #
+    # # Level 3
+    # img_am_teacher_l3 = Image.open(os.path.join(TeacherPath, AMsPath, 'Level 3', am_teacher))
+    # img_am_baseline_l3 = Image.open(os.path.join(BaselinePath, AMsPath, 'Level 3', am_bas))
+    # img_am_student_l3 = Image.open(os.path.join(StudentPath, AMsPath, 'Level 3', am_student))
+    #
+    # plt.figure(1, figsize=(15, 10))
+    # plt.subplot(4, 3, 1)
+    # plt.imshow(img_am_teacher_l0)
+    # plt.axis('off')
+    # plt.title('Teacher L0')
+    #
+    # plt.subplot(4, 3, 2)
+    # plt.imshow(img_am_baseline_l0)
+    # plt.axis('off')
+    # plt.title('Baseline L0')
+    #
+    # plt.subplot(4, 3, 3)
+    # plt.imshow(img_am_student_l0)
+    # plt.axis('off')
+    # plt.title('Student L0')
+    #
+    # plt.subplot(4, 3, 4)
+    # plt.imshow(img_am_teacher_l1)
+    # plt.axis('off')
+    # plt.title('Teacher L1')
+    #
+    # plt.subplot(4, 3, 5)
+    # plt.imshow(img_am_baseline_l1)
+    # plt.axis('off')
+    # plt.title('Baseline L1')
+    #
+    # plt.subplot(4, 3, 6)
+    # plt.imshow(img_am_student_l1)
+    # plt.axis('off')
+    # plt.title('Student L1')
+    #
+    # plt.subplot(4, 3, 7)
+    # plt.imshow(img_am_teacher_l2)
+    # plt.axis('off')
+    # plt.title('Teacher L2')
+    #
+    # plt.subplot(4, 3, 8)
+    # plt.imshow(img_am_baseline_l2)
+    # plt.axis('off')
+    # plt.title('Baseline L2')
+    #
+    # plt.subplot(4, 3, 9)
+    # plt.imshow(img_am_student_l2)
+    # plt.axis('off')
+    # plt.title('Student L2')
+    #
+    # plt.subplot(4, 3, 10)
+    # plt.imshow(img_am_teacher_l3)
+    # plt.axis('off')
+    # plt.title('Teacher L3')
+    #
+    # plt.subplot(4, 3, 11)
+    # plt.imshow(img_am_baseline_l3)
+    # plt.axis('off')
+    # plt.title('Baseline L3')
+    #
+    # plt.subplot(4, 3, 12)
+    # plt.imshow(img_am_student_l3)
+    # plt.axis('off')
+    # plt.title('Student L3')
 
     if (teacher_pred == GT) and (baseline_pred != GT) and (student_pred == GT):
         plt.savefig(os.path.join(SavingPathCorrections, '{}.png'.format(str(c).zfill(3))), dpi=200)

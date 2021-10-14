@@ -2,6 +2,7 @@ import os
 import torch
 import torch.fft
 import resnet
+import resnetCIFAR
 import mobilenetv2
 from getConfiguration import getValidationConfiguration
 
@@ -22,9 +23,14 @@ def defineTeacher(teacher_model):
     if CONFIG_teacher['MODEL']['ARCH'].lower() == 'mobilenetv2':
         model_teacher = mobilenetv2.mobilenet_v2(num_classes=CONFIG_teacher['DATASET']['N_CLASSES'],
                                                  multiscale=CONFIG_teacher['DISTILLATION']['MULTISCALE'])
-    else:
-        model_teacher = resnet.model_dict[CONFIG_teacher['MODEL']['ARCH'].lower()](num_classes=CONFIG_teacher['DATASET']['N_CLASSES'],
-                                                                                   multiscale=CONFIG_teacher['DISTILLATION']['MULTISCALE'])
+    if CONFIG_teacher['MODEL']['ARCH'].lower().find('resnet') != -1:
+        if CONFIG_teacher['MODEL']['ARCH'].lower().find('c') != -1:
+            net_name = CONFIG_teacher['MODEL']['ARCH'][:CONFIG_teacher['MODEL']['ARCH'].lower().find('c')]
+            model_teacher = resnetCIFAR.model_dict[net_name.lower()](num_classes=CONFIG_teacher['DATASET']['N_CLASSES'],
+                                                             multiscale=CONFIG_teacher['DISTILLATION']['MULTISCALE'])
+        else:
+            model_teacher = resnet.model_dict[CONFIG_teacher['MODEL']['ARCH'].lower()](num_classes=CONFIG_teacher['DATASET']['N_CLASSES'],
+                                                                                       multiscale=CONFIG_teacher['DISTILLATION']['MULTISCALE'])
 
     # Load weights
     completeTeacherPath = os.path.join('Results', teacher_model, 'Models', CONFIG_teacher['MODEL']['ARCH'] + '_' +
@@ -45,9 +51,11 @@ def KnowledgeDistillation(CONFIG, loss_function, features_student, features_teac
         # Select all features but the last one
         features_student = features_student[:-1]
         features_teacher = features_teacher[:-1]
+        # features_student = features_student[2:] # ONLY Transfer Learning to MIT
+        # features_teacher = features_teacher[2:] # ONLY Transfer Learning to MIT
         # Obtain loss
         loss_distillation = loss_function(features_student, features_teacher)
-        if CONFIG['DISTILLATION']['PRED_GUIDE']:
+        if str(CONFIG['DISTILLATION']['PRED_GUIDE']).lower() == 'true':
             # Suppress (zero) those distillation losses from image samples that the teacher has not correctly predict
             predictions_teacher = torch.argmax(output_teacher, dim=1)
             predictions_teacher = (predictions_teacher == labels).float()

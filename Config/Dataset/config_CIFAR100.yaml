@@ -1,0 +1,8 @@
+DATASET:
+    NAME: CIFAR100
+    ROOT: ./Data/CIFAR100
+    N_CLASSES: 100
+    MEAN: [0.5071, 0.4867, 0.4408] # CIFAR from RepDistiller
+    STD: [0.2675, 0.2565, 0.2761]
+
+

@@ -1,6 +1,7 @@
 import sys
 sys.path.insert(0, './Libs')
 sys.path.insert(0, './Libs/Datasets')
+sys.path.insert(0, './Distillation Zoo')
 import argparse
 import os
 import time
@@ -9,6 +10,7 @@ import torch.nn as nn
 import torch.nn.parallel
 import torch.optim
 import torch.utils.data
+from torchvision import datasets, transforms
 from sklearn.metrics import confusion_matrix
 import numpy as np
 import yaml
@@ -17,8 +19,14 @@ from getConfiguration import getValidationConfiguration
 from SceneRecognitionDataset import SceneRecognitionDataset
 import matplotlib.pyplot as plt
 import resnet
+import resnetCIFAR
 import mobilenetv2
 import pickle
+import Distillation
+import DFTOurs
+import pytorch_ssim
+
+from DFTOurs import DFTOurs as dct
 
 
 """
@@ -37,7 +45,7 @@ parser = argparse.ArgumentParser(description='Video Classification')
 parser.add_argument('--Model', metavar='DIR', help='Folder to be evaluated', required=True)
 
 
-def validate(val_loader, model):
+def validate(val_loader, model, teacher_model):
     # Start validation time counter
     val_time_start = time.time()
 
@@ -57,6 +65,13 @@ def validate(val_loader, model):
         'top5': utils.AverageMeter(),
     }
 
+    # Instantiate SSIM metric
+    SSIM = list()
+    if CONFIG['DATASET']['NAME'].lower() == 'cifar100':
+        SSIM.extend((utils.AverageMeter(), utils.AverageMeter(), utils.AverageMeter()))
+    else:
+        SSIM.extend((utils.AverageMeter(), utils.AverageMeter(), utils.AverageMeter(), utils.AverageMeter()))
+
     pred_list = []
     GT_list = []
 
@@ -69,16 +84,49 @@ def validate(val_loader, model):
     # Loss Distillation
     loss_distillation = torch.tensor(0).float()
 
+    # Auxiliar class to obtain AMs (is where the function is)
+    DFT = DFTOurs.DFTOurs
+
     with torch.no_grad():
         for i, (mini_batch) in enumerate(val_loader):
             # Start batch_time
             start_time = time.time()
+
             if USE_CUDA:
-                images = mini_batch['Images'].cuda()
-                labels = mini_batch['Labels'].cuda()
+                if CONFIG['DATASET']['NAME'] in ['CIFAR100']:
+                    images = mini_batch[0].cuda()
+                    labels = mini_batch[1].cuda()
+                else:
+                    images = mini_batch['Images'].cuda()
+                    labels = mini_batch['Labels'].cuda()
 
             # CNN Forward
-            output, _ = model(images)
+            output, features_student = model(images)
+
+            if teacher_model is not None:
+                output_teacher, features_teacher = teacher_model(images)
+
+                # Compute difference between student AMs and teacher AMs
+                features_student = features_student[:-1]
+                features_teacher = features_teacher[:-1]
+
+                predictions_teacher = torch.argmax(output_teacher, dim=1)
+                predictions_teacher = (predictions_teacher == labels).float()
+                predictions_teacher = predictions_teacher == 1
+
+                dct_loss = dct()
+                dct_loss(features_student, features_teacher)
+
+                n_scales = len(features_teacher)
+                for scale in range(n_scales):
+                    AMs_student = DFT.returnAM(DFT, features_student[scale])
+                    AMs_teacher = DFT.returnAM(DFT, features_teacher[scale])
+
+                    AMs_student = AMs_student[predictions_teacher]
+                    AMs_teacher = AMs_teacher[predictions_teacher]
+
+                    ssim_loss = pytorch_ssim.ssim(torch.unsqueeze(AMs_student, dim=1), torch.unsqueeze(AMs_teacher, dim=1))
+                    SSIM[scale].update(ssim_loss.item(), batch_size)
 
             # Classification Loss
             loss_class = loss_function(output, labels.long())
@@ -96,6 +144,8 @@ def validate(val_loader, model):
 
             accuracies['top1'].update(acc[0].item(), batch_size)
             accuracies['top5'].update(acc[1].item(), batch_size)
+
+            # SSIM.update(ssim_loss.item(), batch_size)
 
             batch_time.update(time.time() - start_time)
 
@@ -134,7 +184,7 @@ def validate(val_loader, model):
 
         print('Elapsed time for evaluation {time:.3f} seconds'.format(time=time.time() - val_time_start))
 
-    return accuracies, CM
+    return accuracies, CM, SSIM
 
 
 # ----------------------------- #
@@ -162,10 +212,15 @@ if CONFIG['MODEL']['ARCH'].lower() == 'mobilenetv2':
     model = mobilenetv2.mobilenet_v2(pretrained=CONFIG['MODEL']['PRETRAINED'],
                                      num_classes=CONFIG['DATASET']['N_CLASSES'],
                                      multiscale=CONFIG['DISTILLATION']['MULTISCALE'])
-else:
-    model = resnet.model_dict[CONFIG['MODEL']['ARCH'].lower()](pretrained=CONFIG['MODEL']['PRETRAINED'],
-                                                               num_classes=CONFIG['DATASET']['N_CLASSES'],
-                                                               multiscale=CONFIG['DISTILLATION']['MULTISCALE'])
+if CONFIG['MODEL']['ARCH'].lower().find('resnet') != -1:
+    if CONFIG['MODEL']['ARCH'].lower().find('c') != -1:
+        net_name = CONFIG['MODEL']['ARCH'][:CONFIG['MODEL']['ARCH'].lower().find('c')]
+        model = resnetCIFAR.model_dict[net_name.lower()](num_classes=CONFIG['DATASET']['N_CLASSES'],
+                                                         multiscale=CONFIG['DISTILLATION']['MULTISCALE'])
+    else:
+        model = resnet.model_dict[CONFIG['MODEL']['ARCH'].lower()](pretrained=CONFIG['MODEL']['PRETRAINED'],
+                                                                   num_classes=CONFIG['DATASET']['N_CLASSES'],
+                                                                   multiscale=CONFIG['DISTILLATION']['MULTISCALE'])
 
 # Extract model parameters
 model_parameters = filter(lambda p: p.requires_grad, model.parameters())
@@ -189,10 +244,29 @@ if os.path.isfile(completePath):
           .format(best_prec_train=best_prec_train, best_prec_val=best_prec_val))
 
     model.load_state_dict(checkpoint['model_state_dict'])
+    # model.load_state_dict(checkpoint['model'])
 
     model.eval()
 else:
     exit('Model ' + completePath + ' was not found.')
+
+
+# Load, if so, Teacher that was used for training the model
+if CONFIG['DISTILLATION']['TEACHER'] != 'None':
+    teacher_path = os.path.join(CONFIG['DATASET']['NAME'], 'Teachers', CONFIG['DISTILLATION']['TEACHER'])
+else:
+    teacher_path = os.path.join(CONFIG['DATASET']['NAME'], 'Teachers', 'ResNet56C ' + CONFIG['DATASET']['NAME'])
+
+print('Defining teacher as model from {}'.format(teacher_path))
+
+model_teacher = Distillation.defineTeacher(teacher_path)
+
+model_teacher.eval()
+if USE_CUDA:
+    model_teacher.cuda()
+
+# model_teacher = None
+
 
 # ----------------------------- #
 #           Datasets            #
@@ -201,14 +275,27 @@ else:
 print('-' * 65)
 print('Loading dataset {}...'.format(CONFIG['DATASET']['NAME']))
 
-if CONFIG['DATASET']['NAME'] == 'ADE20K' or CONFIG['DATASET']['NAME'] == 'MIT67' or CONFIG['DATASET']['NAME'] == 'SUN397':
+if CONFIG['DATASET']['NAME'] in ['ADE20K', 'MIT67', 'SUN397']:
     valDataset = SceneRecognitionDataset(CONFIG, set='Val', mode='Val')
+    # valDataset = SceneRecognitionDataset(CONFIG, set='Train', mode='Val')
+elif CONFIG['DATASET']['NAME'] in ['CIFAR100']:
+    val_transform = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize(CONFIG['DATASET']['MEAN'], CONFIG['DATASET']['STD']),
+    ])
+
+    # valDataset = datasets.CIFAR100(root=CONFIG['DATASET']['ROOT'], download=True, train=False, transform=val_transform)
+    valDataset = datasets.CIFAR100(root=CONFIG['DATASET']['ROOT'], download=True, train=True, transform=val_transform)
+
+    valDataset.nclasses = 100
 else:
     print('Dataset specified does not exit.')
     exit()
 
+# val_loader = torch.utils.data.DataLoader(valDataset, batch_size=1, shuffle=False,
+#                                          num_workers=8, pin_memory=True)
 val_loader = torch.utils.data.DataLoader(valDataset, batch_size=int(CONFIG['VALIDATION']['BATCH_SIZE']['BS_TEST']), shuffle=False,
-                                         num_workers=0, pin_memory=True)
+                                         num_workers=8, pin_memory=True)
 
 
 dataset_nclasses = valDataset.nclasses
@@ -241,20 +328,27 @@ else:
 # ----------------------------- #
 
 # Validate one epoch
-accuracies, CM = validate(val_loader, model)
+accuracies, CM, SSIM = validate(val_loader, model, model_teacher)
 
 print('-' * 65)
 print('RESULTS FOR VALIDATION')
 print('Top@1 Accuracy: {top1:.2f}%.\n'
       'Top@5 Accuracy: {top5:.2f}%.\n'
-      'MCA: {mca:.2f}%.'
+      'MCA: {mca:.2f}%.\n'
       .format(top1=accuracies['top1'].avg, top5=accuracies['top5'].avg, mca=np.mean(accuracies['class'])*100))
 
+ssim_avg = 0
+for i in range(len(SSIM)):
+    print('SSIM L{}: {ssim:.2f}.'.format(i, ssim=SSIM[i].avg))
+    ssim_avg += SSIM[i].avg
+ssim_avg /= len(SSIM)
+print('SSIM Averaged: {ssim:.2f}.'.format(ssim=ssim_avg))
 
 # Summary Stats
 sumary_dict_file = {'VALIDATION': {'ACCURACY TOP1': str(round(accuracies['top1'].avg, 2)) + ' %',
                                    'ACCURACY TOP5': str(round(accuracies['top5'].avg, 2)) + ' %',
                                    'MCA': str(round(np.mean(accuracies['class'])*100, 2)) + ' %',
+                                   'SSIM': str(round(ssim_avg, 3)),
                                    },
                     'EPOCH': checkpoint['epoch'],
                     }

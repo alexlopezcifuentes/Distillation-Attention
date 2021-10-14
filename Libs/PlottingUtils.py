@@ -290,11 +290,16 @@ def returnAM(feature_conv, RGBbatch=None, resize=True, resizeSize=None, normaliz
         cam = torch.nn.functional.normalize(cam, p=2, dim=1)
         cam = cam.view(bs, h, w)
     elif normalization.lower() == 'minmax':
-        cam = cam.view(bs, -1)
-        min = torch.min(cam, dim=1)[0]
-        max = torch.max(cam, dim=1)[0]
-        cam = cam - min[:, None]
-        cam = cam / max[:, None]
-        cam = cam.view(bs, h, w)
+
+        # cam = cam.view(bs, -1)
+        # min = torch.min(cam, dim=1)[0]
+        # max = torch.max(cam, dim=1)[0]
+        # cam = cam - min[:, None]
+        # cam = cam / max[:, None]
+        # cam = cam.view(bs, h, w)
+
+        min_v = torch.min(torch.min(cam, dim=1)[0], dim=1)[0][:, None, None]
+        max_v = torch.max(torch.max(cam, dim=1)[0], dim=1)[0][:, None, None]
+        cam = (cam - min_v) / (max_v - min_v)
 
     return cam
