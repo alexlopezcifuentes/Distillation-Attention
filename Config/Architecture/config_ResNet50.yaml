@@ -3,6 +3,7 @@ MODEL:
     COMMENTS: Comment
     OUTPUT_DIR: Results
     PRETRAINED: ImageNet # Possibilities ImageNet or None
+    FINETUNNING: False
 
     # Spatial HyperParameters
     RESIZE: 256

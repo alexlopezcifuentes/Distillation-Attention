@@ -1,6 +1,6 @@
 TRAINING:
-    PRINT_FREQ: 50
-    EPOCHS: 70
+    PRINT_FREQ: 100
+    EPOCHS: 240
     BATCH_SIZE:
         BS_TRAIN: 128
         BS_TEST: 256
@@ -12,12 +12,11 @@ TRAINING:
         DELTA: 0
     OPTIMIZER:
         NAME: SGD
-#        LR: 0.01 # For Teachers pretrained from ImageNet
-        LR: 0.1 # The rest
-        WEIGHT_DECAY: 1e-04
+        LR: 0.05
+        WEIGHT_DECAY: 5e-4
     SCHEDULER:
-        NAME: STEP # Possibilities: STEP, MULTISTEP
-        LR_DECAY: 25
+        NAME: MULTISTEP # Possibilities: STEP, MULTISTEP
+        LR_DECAY: [150, 180, 210]
         GAMMA: 0.1
 
 VALIDATION:

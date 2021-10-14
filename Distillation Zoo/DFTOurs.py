@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.fft
+import matplotlib.pyplot as plt
 
 """
 Using a DCT-driven Loss in Attention-based Knowledge-Distillation for Scene Recognition
@@ -44,6 +45,30 @@ class DFTOurs(nn.Module):
 
             destillation_loss = torch.sqrt(torch.sum(torch.pow(ffts_s - ffts_t, 2), dim=1))
 
+            # for i in range(AMs_teacher.shape[0]):
+            #     AM_s = AMs_student[i, :]
+            #     AM_t = AMs_teacher[i, :]
+            #
+            #     DCT_s = ffts_s[i, :].reshape(AM_s.shape[0], AM_s.shape[1])
+            #     DCT_t = ffts_t[i, :].reshape(AM_t.shape[0], AM_t.shape[1])
+            #
+            #     plt.figure(1)
+            #     plt.subplot(2, 2, 1)
+            #     plt.imshow(AM_s.cpu().numpy())
+            #     plt.title('Student. Loss {}'.format(destillation_loss[i]))
+            #     plt.subplot(2, 2, 2)
+            #     plt.imshow(AM_t.cpu().numpy())
+            #     plt.title('Teacher')
+            #     plt.subplot(2, 2, 3)
+            #     plt.imshow(DCT_s.cpu().numpy())
+            #     plt.title('DCT Student')
+            #     plt.subplot(2, 2, 4)
+            #     plt.imshow(DCT_t.cpu().numpy())
+            #     plt.title('DCT Teacher')
+            #     plt.show()
+            #     # plt.savefig(os.path.join('Mapas Activacion CIFAR', 'Level {}'.format(str(scale + 1)), '{}.jpg'.format(str(i).zfill(4))))
+            #     # plt.close()
+
             scale_loss += destillation_loss
 
         return scale_loss
@@ -62,15 +87,20 @@ class DFTOurs(nn.Module):
         # Compute 2D-DCT for the Student as separable transform. First in one dimension then in the other.
         # As there is no PyTorch implementation of DCT we use the DFT. DCT = abs(real(DFT))
         dct_am = torch.fft.fft(torch.fft.fft(activation_map, dim=1), dim=2)
-        dct_am = torch.abs(torch.real(dct_am))
+        # dct_am = torch.abs(torch.real(dct_am))
+        dct_am = torch.real(dct_am)
 
         # Normalize between 0-1 the 2D-DCT with min-max normalization.
-        min_s = torch.repeat_interleave(torch.unsqueeze(torch.min(dct_am.view(bs, -1), dim=1)[0], dim=1), h, dim=1)
-        min_s = torch.repeat_interleave(torch.unsqueeze(min_s, dim=2), w, dim=2)
-        max_s = torch.repeat_interleave(torch.unsqueeze(torch.max(dct_am.view(bs, -1), dim=1)[0], dim=1), h, dim=1)
-        max_s = torch.repeat_interleave(torch.unsqueeze(max_s, dim=2), w, dim=2)
+        # min_s = torch.repeat_interleave(torch.unsqueeze(torch.min(dct_am.view(bs, -1), dim=1)[0], dim=1), h, dim=1)
+        # min_s = torch.repeat_interleave(torch.unsqueeze(min_s, dim=2), w, dim=2)
+        # max_s = torch.repeat_interleave(torch.unsqueeze(torch.max(dct_am.view(bs, -1), dim=1)[0], dim=1), h, dim=1)
+        # max_s = torch.repeat_interleave(torch.unsqueeze(max_s, dim=2), w, dim=2)
+        #
+        # dct_am = (dct_am - min_s) / (max_s - min_s)
 
-        dct_am = (dct_am - min_s) / max_s
+        min_s = torch.min(torch.min(dct_am, dim=1)[0], dim=1)[0][:, None, None]
+        max_s = torch.max(torch.max(dct_am, dim=1)[0], dim=1)[0][:, None, None]
+        dct_am = (dct_am - min_s) / (max_s - min_s)
 
         return dct_am
 
@@ -81,19 +111,27 @@ class DFTOurs(nn.Module):
         :return:
         """
 
-        # Obtain sizes from the features
-        bs, nc, h, w = feature_conv.shape
+        # # Obtain sizes from the features
+        # bs, nc, h, w = feature_conv.shape
+        #
+        # # Obtain activation maps as the mean aggregation of features.
+        # cam = feature_conv.pow(2).mean(1)
+        #
+        # # Min-max normalization for Activation Map.
+        # cam = cam.view(bs, -1)
+        # min = torch.min(cam, dim=1)[0]
+        # max = torch.max(cam, dim=1)[0]
+        # cam = cam - min[:, None]
+        # cam = cam / max[:, None]
+        # cam = cam.view(bs, h, w)
 
         # Obtain activation maps as the mean aggregation of features.
         cam = feature_conv.pow(2).mean(1)
 
         # Min-max normalization for Activation Map.
-        cam = cam.view(bs, -1)
-        min = torch.min(cam, dim=1)[0]
-        max = torch.max(cam, dim=1)[0]
-        cam = cam - min[:, None]
-        cam = cam / max[:, None]
-        cam = cam.view(bs, h, w)
+        min_v = torch.min(torch.min(cam, dim=1)[0], dim=1)[0][:, None, None]
+        max_v = torch.max(torch.max(cam, dim=1)[0], dim=1)[0][:, None, None]
+        cam = (cam - min_v) / (max_v - min_v)
 
         return cam
 

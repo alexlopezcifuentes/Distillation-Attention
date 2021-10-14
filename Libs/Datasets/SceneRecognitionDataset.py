@@ -126,11 +126,11 @@ class SceneRecognitionDataset(Dataset):
         return len(self.filenames)
 
     def __getitem__(self, idx):
-        '''
+        """
         Get item function
         :param idx: Index of the sample
         :return: Dictionary containing the image and the label
-        '''
+        """
 
         # Get RGB image path and load it
         img_name = os.path.join(self.image_dir, self.set, (self.filenames[idx] + ".jpg"))

@@ -31,7 +31,7 @@ python trainCNNs.py --Architecture ResNet152 --Dataset ADE20K --Distillation Non
 
 python trainCNNs.py --Architecture ResNet18    --Dataset ADE20K --Distillation None --Options COMMENTS='ResNet18 Baseline training'
 python trainCNNs.py --Architecture ResNet34    --Dataset ADE20K --Distillation None --Options COMMENTS='ResNet34 Baseline training'
-python trainCNNs.py --Architecture MobileNetV2 --Dataset ADE20K --Distillation None --Options COMMENTS='ResNet34 Baseline training'
+python trainCNNs.py --Architecture MobileNetV2 --Dataset ADE20K --Distillation None --Options COMMENTS='MobileNetV2 Baseline training'
 
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- #

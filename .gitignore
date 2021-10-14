@@ -1,10 +1,12 @@
-
+Data/CIFAR100
 Data/ADEChallengeData2016/train
 Data/ADEChallengeData2016/val
 Data/MITIndoor67/train
 Data/MITIndoor67/val
 Data/SUN397/train
 Data/SUN397/val
+
+Mapas Activacion CIFAR/
 
 Results/
 

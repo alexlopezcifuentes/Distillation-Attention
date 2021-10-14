@@ -21,7 +21,9 @@ import Distillation
 from getConfiguration import getConfiguration
 from SceneRecognitionDataset import SceneRecognitionDataset
 from SceneRecognitionDatasetCRD import SceneRecognitionDatasetCRD
+from torchvision import datasets, transforms
 import resnet
+import resnetCIFAR
 import mobilenetv2
 
 # Distill Models
@@ -103,8 +105,12 @@ def train(train_loader, model, optimizer, criterion_list, teacher_model=None):
         # Start batch_time
         start_time = time.time()
         if USE_CUDA:
-            images = mini_batch['Images'].cuda()
-            labels = mini_batch['Labels'].cuda()
+            if CONFIG['DATASET']['NAME'] in ['CIFAR100']:
+                images = mini_batch[0].cuda()
+                labels = mini_batch[1].cuda()
+            else:
+                images = mini_batch['Images'].cuda()
+                labels = mini_batch['Labels'].cuda()
             if CONFIG['DISTILLATION']['D_LOSS'].lower() == 'crd':
                 index = mini_batch['Idx'].cuda()
                 contrast_idx = mini_batch['Sample Idx'].cuda()
@@ -222,8 +228,12 @@ def validate(val_loader, model, criterion_list, teacher_model=None):
             # Start batch_time
             start_time = time.time()
             if USE_CUDA:
-                images = mini_batch['Images'].cuda()
-                labels = mini_batch['Labels'].cuda()
+                if CONFIG['DATASET']['NAME'] in ['CIFAR100']:
+                    images = mini_batch[0].cuda()
+                    labels = mini_batch[1].cuda()
+                else:
+                    images = mini_batch['Images'].cuda()
+                    labels = mini_batch['Labels'].cuda()
             if CONFIG['DISTILLATION']['D_LOSS'].lower() == 'ckd':
                 loss_function_distill.eval()
                 if images.shape[0] < batch_size:
@@ -309,10 +319,15 @@ print('-' * 65)
 # Create folders to save results
 Date = str(time.localtime().tm_year) + '-' + str(time.localtime().tm_mon).zfill(2) + '-' + str(time.localtime().tm_mday).zfill(2) +\
        ' ' + str(time.localtime().tm_hour).zfill(2) + ':' + str(time.localtime().tm_min).zfill(2) + ':' + str(time.localtime().tm_sec).zfill(2)
-ResultsPath = os.path.join(CONFIG['MODEL']['OUTPUT_DIR'], CONFIG['DATASET']['NAME'], Date + ' ' +
-                           CONFIG['MODEL']['ARCH'] + ' ' + CONFIG['DATASET']['NAME'] + ' ' + CONFIG['DISTILLATION']['D_LOSS'])
 
-os.mkdir(ResultsPath)
+if int(CONFIG['TRAINING']['KD']['DELTA']) == 0:
+    ResultsPath = os.path.join(CONFIG['MODEL']['OUTPUT_DIR'], CONFIG['DATASET']['NAME'], Date + ' ' +
+                               CONFIG['MODEL']['ARCH'] + ' ' + CONFIG['DATASET']['NAME'] + ' ' + CONFIG['DISTILLATION']['D_LOSS'])
+else:
+    ResultsPath = os.path.join(CONFIG['MODEL']['OUTPUT_DIR'], CONFIG['DATASET']['NAME'], Date + ' ' +
+                               CONFIG['MODEL']['ARCH'] + ' ' + CONFIG['DATASET']['NAME'] + ' ' + CONFIG['DISTILLATION']['D_LOSS'] + ' + KD')
+
+os.makedirs(ResultsPath)
 os.mkdir(os.path.join(ResultsPath, 'Images'))
 os.mkdir(os.path.join(ResultsPath, 'Images', 'Dataset'))
 os.mkdir(os.path.join(ResultsPath, 'Files'))
@@ -343,10 +358,54 @@ if CONFIG['MODEL']['ARCH'].lower() == 'mobilenetv2':
     model = mobilenetv2.mobilenet_v2(pretrained=CONFIG['MODEL']['PRETRAINED'],
                                      num_classes=CONFIG['DATASET']['N_CLASSES'],
                                      multiscale=CONFIG['DISTILLATION']['MULTISCALE'])
-else:
-    model = resnet.model_dict[CONFIG['MODEL']['ARCH'].lower()](pretrained=CONFIG['MODEL']['PRETRAINED'],
-                                                               num_classes=CONFIG['DATASET']['N_CLASSES'],
-                                                               multiscale=CONFIG['DISTILLATION']['MULTISCALE'])
+if CONFIG['MODEL']['ARCH'].lower().find('resnet') != -1:
+    if CONFIG['MODEL']['ARCH'].lower() in ['resnet20', 'resnet20c', 'resnet56', 'resnet56c', 'resnet32x4c', 'resnet8x4c', 'resnet110c']:
+        if CONFIG['MODEL']['ARCH'].lower().find('c') != -1:
+            net_name = CONFIG['MODEL']['ARCH'][:CONFIG['MODEL']['ARCH'].lower().find('c')]
+        else:
+            net_name = CONFIG['MODEL']['ARCH']
+        model = resnetCIFAR.model_dict[net_name.lower()](num_classes=CONFIG['DATASET']['N_CLASSES'],
+                                                         multiscale=CONFIG['DISTILLATION']['MULTISCALE'])
+        model.fc = torch.nn.Linear(3136, CONFIG['DATASET']['N_CLASSES'])
+        print('OJOOOOOOOOOOOOOOOOOOOOOOOOOO')
+    else:
+        model = resnet.model_dict[CONFIG['MODEL']['ARCH'].lower()](pretrained=CONFIG['MODEL']['PRETRAINED'],
+                                                                   num_classes=CONFIG['DATASET']['N_CLASSES'],
+                                                                   multiscale=CONFIG['DISTILLATION']['MULTISCALE'])
+
+if CONFIG['MODEL']['FINETUNNING']:
+    # Freezing
+    print('-' * 65)
+    print('Freezing first ResNet block in the model!')
+    print('-' * 65)
+    ct = 0
+    for child in model.children():
+        if ct <= 4:
+            # print(str(child) + " is not trained")
+            for param in child.parameters():
+                param.requires_grad = False
+        else:
+            a = 1
+            # print(str(child) + " is trained")
+        ct += 1
+
+    # print('-' * 65)
+    # print('Freezing all BatchNormalization in the model!')
+    # print('-' * 65)
+    # count = 0
+    # for m in model.modules():
+    #     if isinstance(m, nn.BatchNorm2d):
+    #         m.eval()
+    #         # shutdown update in frozen mode
+    #         m.weight.requires_grad = False
+    #         m.bias.requires_grad = False
+    #     elif isinstance(m, nn.Sequential):
+    #         for j in m.modules():
+    #             if isinstance(j, nn.BatchNorm2d):
+    #                 j.eval()
+    #                 # shutdown update in frozen mode
+    #                 j.weight.requires_grad = False
+    #                 j.bias.requires_grad = False
 
 
 dummy_input = torch.randn(2, 3, CONFIG['MODEL']['CROP'], CONFIG['MODEL']['CROP'])
@@ -391,15 +450,42 @@ student_trainable_list.append(model)
 print('-' * 65)
 print('Loading dataset {}...'.format(CONFIG['DATASET']['NAME']))
 
-if CONFIG['DISTILLATION']['D_LOSS'] == 'CRD':
-    trainDataset = SceneRecognitionDatasetCRD(CONFIG, set='Train', mode='Train')
+
+if CONFIG['DATASET']['NAME'] in ['ADE20K', 'MIT67', 'SUN397']:
+    if CONFIG['DISTILLATION']['D_LOSS'] == 'CRD':
+        trainDataset = SceneRecognitionDatasetCRD(CONFIG, set='Train', mode='Train')
+    else:
+        trainDataset = SceneRecognitionDataset(CONFIG, set='Train', mode='Train')
     valDataset = SceneRecognitionDataset(CONFIG, set='Val', mode='Val')
-elif CONFIG['DATASET']['NAME'] == 'ADE20K' or CONFIG['DATASET']['NAME'] == 'MIT67' or CONFIG['DATASET']['NAME'] == 'SUN397':
-    trainDataset = SceneRecognitionDataset(CONFIG, set='Train', mode='Train')
-    valDataset = SceneRecognitionDataset(CONFIG, set='Val', mode='Val')
+elif CONFIG['DATASET']['NAME'] in ['CIFAR100']:
+    train_transform = transforms.Compose([
+        transforms.RandomCrop(CONFIG['MODEL']['CROP'], padding=4),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        transforms.Normalize(CONFIG['DATASET']['MEAN'], CONFIG['DATASET']['STD']),
+    ])
+    # train_transform = transforms.Compose([
+    #     transforms.Resize(36),
+    #     transforms.RandomCrop(CONFIG['MODEL']['CROP']),
+    #     transforms.RandomHorizontalFlip(),
+    #     transforms.ToTensor(),
+    #     transforms.Normalize(CONFIG['DATASET']['MEAN'], CONFIG['DATASET']['STD']),
+    # ])
+    val_transform = transforms.Compose([
+        # transforms.Resize(36),
+        # transforms.CenterCrop(CONFIG['MODEL']['CROP']),
+        transforms.ToTensor(),
+        transforms.Normalize(CONFIG['DATASET']['MEAN'], CONFIG['DATASET']['STD']),
+    ])
+
+    trainDataset = datasets.CIFAR100(root=CONFIG['DATASET']['ROOT'], download=True, train=True, transform=train_transform)
+    valDataset = datasets.CIFAR100(root=CONFIG['DATASET']['ROOT'], download=True, train=False, transform=val_transform)
+
+    trainDataset.nclasses = 100
 else:
     print('Dataset specified does not exit.')
     exit()
+
 
 train_loader = torch.utils.data.DataLoader(trainDataset, batch_size=int(CONFIG['TRAINING']['BATCH_SIZE']['BS_TRAIN']), shuffle=True,
                                            num_workers=8, pin_memory=True)
@@ -493,7 +579,8 @@ print('----------------------------------------------------------------')
 
 # Optimizers
 if CONFIG['TRAINING']['OPTIMIZER']['NAME'] == 'SGD':
-    optimizer = torch.optim.SGD(params=student_trainable_list.parameters(), lr=float(CONFIG['TRAINING']['OPTIMIZER']['LR']), momentum=0.9, weight_decay=1e-04)
+    optimizer = torch.optim.SGD(params=student_trainable_list.parameters(), lr=float(CONFIG['TRAINING']['OPTIMIZER']['LR']),
+                                momentum=0.9, weight_decay=float(CONFIG['TRAINING']['OPTIMIZER']['WEIGHT_DECAY']))
 else:
     raise Exception('Optimizer {} was indicate in configuration file. This optimizer is not supported.\n'
                     'The following optimizers are supported: SGD'
@@ -501,8 +588,11 @@ else:
 
 # Scheduler
 if CONFIG['TRAINING']['SCHEDULER']['NAME'] == 'STEP':
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=int(CONFIG['TRAINING']['OPTIMIZER']['LR_DECAY']),
-                                                gamma=CONFIG['TRAINING']['OPTIMIZER']['GAMMA'])
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=int(CONFIG['TRAINING']['SCHEDULER']['LR_DECAY']),
+                                                gamma=CONFIG['TRAINING']['SCHEDULER']['GAMMA'])
+elif CONFIG['TRAINING']['SCHEDULER']['NAME'] == 'MULTISTEP':
+    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=CONFIG['TRAINING']['SCHEDULER']['LR_DECAY'],
+                                                     gamma=CONFIG['TRAINING']['SCHEDULER']['GAMMA'])
 else:
     raise Exception('Scheduler {} was indicate in configuration file. This Scheduler is not supported.\n'
                     'The following optimizers are supported: WARM-UP, STEP'
@@ -583,6 +673,8 @@ for epoch in range(actual_epoch, train_epochs):
     }, is_best, ResultsPath, CONFIG['MODEL']['ARCH'] + '_' + CONFIG['DATASET']['NAME'])
 
     print('Elapsed time for epoch {}: {time:.3f} minutes'.format(epoch, time=epoch_time))
+    print('Estimated time to finish training: {time}'.format(epoch, time=str(datetime.timedelta(seconds=int(epoch_time * (train_epochs - (epoch + 1)))))))
+    print(' ')
 
 print('Training completed.')
 print('Best validation precision {acc:.2f}.'.format(acc=best_prec))

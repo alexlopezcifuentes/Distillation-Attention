@@ -5,7 +5,7 @@
 
 cd ..
 chmod +x evaluateCNNs.py
-#chmod +x extractAMs.py
+chmod +x extractAMs.py
 #chmod +x visualizeAMs.py
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- #
@@ -18,29 +18,32 @@ chmod +x evaluateCNNs.py
 #                                                                              TEACHERS                                                                                  #
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- #
 
-python evaluateCNNs.py --Model "ADE20K/Teachers/Teacher ResNet50 ADE20K"
-python evaluateCNNs.py --Model "ADE20K/Teachers/Teacher ResNet152 ADE20K"
+#python evaluateCNNs.py --Model "CIFAR100/Teachers/T1 ResNet56C CIFAR100"
+#python evaluateCNNs.py --Model "CIFAR100/Teachers/T2 ResNet56C CIFAR100"
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- #
 #                                                                              BASELINES                                                                                 #
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- #
 
-python evaluateCNNs.py --Model "ADE20K/Baselines/Baseline 1 ResNet18 ADE20K"
-python evaluateCNNs.py --Model "ADE20K/Baselines/Baseline 1 ResNet34 ADE20K"
-python evaluateCNNs.py --Model "ADE20K/Baselines/Baseline 1 MobileNetV2 ADE20K"
+#python evaluateCNNs.py --Model "CIFAR100/Baselines/B1 ResNet20C CIFAR100"
+#python evaluateCNNs.py --Model "CIFAR100/Baselines/B2 ResNet20C CIFAR100"
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- #
 #                                                                         KNOWLEDGE DISTILLATION                                                                         #
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- #
 
-python evaluateCNNs.py --Model "ADE20K/1 ResNet18 ADE20K DFT"
-python evaluateCNNs.py --Model "ADE20K/1 ResNet34 ADE20K DFT"
-python evaluateCNNs.py --Model "ADE20K/1 MobileNetV2 ADE20K DFT"
+python extractAMs.py --Model "CIFAR100/Teachers/ResNet56C CIFAR100"
+python extractAMs.py --Model "CIFAR100/Baselines/ResNet20C CIFAR100"
+python extractAMs.py --Model "CIFAR100/T56C S20C/ID 5 ResNet20C CIFAR100 DFT"
 
-python evaluateCNNs.py --Model "ADE20K/1 ResNet18 ADE20K DFT+KD"
-python evaluateCNNs.py --Model "ADE20K/1 ResNet34 ADE20K DFT+KD"
-python evaluateCNNs.py --Model "ADE20K/1 MobileNetV2 ADE20K DFT+KD"
+#python evaluateCNNs.py --Model "CIFAR100/Teachers/ResNet32x4C CIFAR100"
 
+#python evaluateCNNs.py --Model "CIFAR100/ID 3 ResNet20C CIFAR100 DFT"
+#python evaluateCNNs.py --Model "CIFAR100/ID 4 ResNet20C CIFAR100 DFT"
+#python evaluateCNNs.py --Model "CIFAR100/ResNet20C CIFAR100 AT"
+#python evaluateCNNs.py --Model "CIFAR100/ID 7 ResNet20C CIFAR100 DFT"
+#python evaluateCNNs.py --Model "CIFAR100/ID 3 ResNet20C CIFAR100 AT"
+#python evaluateCNNs.py --Model "CIFAR100/ID 4 ResNet20C CIFAR100 AT"
 
 
 

@@ -1,10 +1,9 @@
 MODEL:
-    ARCH: MobileNetV2
+    ARCH: ResNet110C
     COMMENTS: Comment
     OUTPUT_DIR: Results
-    PRETRAINED: None # Possibilities ImageNet or None
+    PRETRAINED: None # Possibilities EPIC, Places or None
     FINETUNNING: False
 
     # Spatial HyperParameters
-    RESIZE: 256
-    CROP: 224
+    CROP: 32
