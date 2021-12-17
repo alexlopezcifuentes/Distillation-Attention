@@ -51,8 +51,10 @@ def KnowledgeDistillation(CONFIG, loss_function, features_student, features_teac
         # Select all features but the last one
         features_student = features_student[:-1]
         features_teacher = features_teacher[:-1]
+
         # features_student = features_student[2:] # ONLY Transfer Learning to MIT
         # features_teacher = features_teacher[2:] # ONLY Transfer Learning to MIT
+
         # Obtain loss
         loss_distillation = loss_function(features_student, features_teacher)
         if str(CONFIG['DISTILLATION']['PRED_GUIDE']).lower() == 'true':
@@ -94,5 +96,8 @@ def KnowledgeDistillation(CONFIG, loss_function, features_student, features_teac
     elif CONFIG['DISTILLATION']['D_LOSS'].lower() == 'ckd':
         s_value, f_target, weight = loss_function.self_attention(features_student[1:-1], features_teacher[1:-1])
         loss_distillation = loss_function(s_value, f_target, weight)
+
+    elif CONFIG['DISTILLATION']['D_LOSS'].lower() == 'review':
+        loss_distillation = loss_function(features_student, features_teacher)
 
     return loss_distillation

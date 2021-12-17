@@ -144,6 +144,6 @@ class SceneRecognitionDataset(Dataset):
         img = self.transform(img)
 
         # Create dictionary with the image and the label
-        self.sample = {'Images': img, 'Labels': self.classes.index(self.labels[idx])}
+        self.sample = {'Images': img, 'Labels': self.classes.index(self.labels[idx]), 'Index': idx}
 
         return self.sample

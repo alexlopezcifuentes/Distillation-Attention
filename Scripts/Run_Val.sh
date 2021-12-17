@@ -1,7 +1,7 @@
+#!/bin/bash
+
 # This file should be executed from terminal in Folder 'Scripts' with the following command:
 # source Run_Tests.sh
-
-#!/bin/bash
 
 cd ..
 chmod +x evaluateCNNs.py
@@ -32,19 +32,24 @@ chmod +x extractAMs.py
 #                                                                         KNOWLEDGE DISTILLATION                                                                         #
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- #
 
-python extractAMs.py --Model "CIFAR100/Teachers/ResNet56C CIFAR100"
-python extractAMs.py --Model "CIFAR100/Baselines/ResNet20C CIFAR100"
-python extractAMs.py --Model "CIFAR100/T56C S20C/ID 5 ResNet20C CIFAR100 DFT"
+# ADE
+#python evaluateCNNs.py --Model "ADE20K/ResNet34 ADE20K Review"
+#python evaluateCNNs.py --Model "ADE20K/ResNet34 ADE20K Review + KD"
+#python evaluateCNNs.py --Model "ADE20K/MobileNetV2 ADE20K Review"
+#python evaluateCNNs.py --Model "ADE20K/MobileNetV2 ADE20K Review + KD"
 
-#python evaluateCNNs.py --Model "CIFAR100/Teachers/ResNet32x4C CIFAR100"
+# MIT
+python evaluateCNNs.py --Model "MIT67/ResNet18 MIT67 Review"
+python evaluateCNNs.py --Model "MIT67/ResNet34 MIT67 Review"
+python evaluateCNNs.py --Model "MIT67/MobileNetV2 MIT67 Review"
 
-#python evaluateCNNs.py --Model "CIFAR100/ID 3 ResNet20C CIFAR100 DFT"
-#python evaluateCNNs.py --Model "CIFAR100/ID 4 ResNet20C CIFAR100 DFT"
-#python evaluateCNNs.py --Model "CIFAR100/ResNet20C CIFAR100 AT"
-#python evaluateCNNs.py --Model "CIFAR100/ID 7 ResNet20C CIFAR100 DFT"
-#python evaluateCNNs.py --Model "CIFAR100/ID 3 ResNet20C CIFAR100 AT"
-#python evaluateCNNs.py --Model "CIFAR100/ID 4 ResNet20C CIFAR100 AT"
-
+# SUN397
+#python evaluateCNNs.py --Model "SUN397/ResNet18 SUN397 Review"
+#python evaluateCNNs.py --Model "SUN397/ResNet34 SUN397 Review"
+#python evaluateCNNs.py --Model "SUN397/MobileNetV2 SUN397 Review"
+#python evaluateCNNs.py --Model "SUN397/ResNet18 SUN397 Review + KD"
+#python evaluateCNNs.py --Model "SUN397/ResNet34 SUN397 Review + KD"
+#python evaluateCNNs.py --Model "SUN397/MobileNetV2 SUN397 Review + KD"
 
 
 # Other validation stuff

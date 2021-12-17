@@ -25,6 +25,8 @@ import pickle
 import Distillation
 import DFTOurs
 import pytorch_ssim
+import reviewKD
+
 
 from DFTOurs import DFTOurs as dct
 
@@ -207,20 +209,27 @@ print('-' * 65)
 # ----------------------------- #
 #           Networks            #
 # ----------------------------- #
-# Given the configuration file build the desired CNN network
-if CONFIG['MODEL']['ARCH'].lower() == 'mobilenetv2':
-    model = mobilenetv2.mobilenet_v2(pretrained=CONFIG['MODEL']['PRETRAINED'],
-                                     num_classes=CONFIG['DATASET']['N_CLASSES'],
-                                     multiscale=CONFIG['DISTILLATION']['MULTISCALE'])
-if CONFIG['MODEL']['ARCH'].lower().find('resnet') != -1:
-    if CONFIG['MODEL']['ARCH'].lower().find('c') != -1:
-        net_name = CONFIG['MODEL']['ARCH'][:CONFIG['MODEL']['ARCH'].lower().find('c')]
-        model = resnetCIFAR.model_dict[net_name.lower()](num_classes=CONFIG['DATASET']['N_CLASSES'],
-                                                         multiscale=CONFIG['DISTILLATION']['MULTISCALE'])
-    else:
-        model = resnet.model_dict[CONFIG['MODEL']['ARCH'].lower()](pretrained=CONFIG['MODEL']['PRETRAINED'],
-                                                                   num_classes=CONFIG['DATASET']['N_CLASSES'],
-                                                                   multiscale=CONFIG['DISTILLATION']['MULTISCALE'])
+
+if CONFIG['DISTILLATION']['D_LOSS'].lower() == 'review':
+    model = reviewKD.build_review_kd(CONFIG)
+else:
+    # Given the configuration file build the desired CNN network
+    if CONFIG['MODEL']['ARCH'].lower() == 'mobilenetv2':
+        model = mobilenetv2.mobilenet_v2(pretrained=CONFIG['MODEL']['PRETRAINED'],
+                                         num_classes=CONFIG['DATASET']['N_CLASSES'],
+                                         multiscale=CONFIG['DISTILLATION']['MULTISCALE'])
+    elif CONFIG['MODEL']['ARCH'].lower().find('resnet') != -1:
+        if CONFIG['MODEL']['ARCH'].lower() in ['resnet20', 'resnet20c', 'resnet56', 'resnet56c', 'resnet32x4c', 'resnet8x4c', 'resnet110c']:
+            if CONFIG['MODEL']['ARCH'].lower().find('c') != -1:
+                net_name = CONFIG['MODEL']['ARCH'][:CONFIG['MODEL']['ARCH'].lower().find('c')]
+            else:
+                net_name = CONFIG['MODEL']['ARCH']
+            model = resnetCIFAR.model_dict[net_name.lower()](num_classes=CONFIG['DATASET']['N_CLASSES'],
+                                                             multiscale=CONFIG['DISTILLATION']['MULTISCALE'])
+        else:
+            model = resnet.model_dict[CONFIG['MODEL']['ARCH'].lower()](pretrained=CONFIG['MODEL']['PRETRAINED'],
+                                                                       num_classes=CONFIG['DATASET']['N_CLASSES'],
+                                                                       multiscale=CONFIG['DISTILLATION']['MULTISCALE'])
 
 # Extract model parameters
 model_parameters = filter(lambda p: p.requires_grad, model.parameters())

@@ -3,7 +3,7 @@ TRAINING:
     EPOCHS: 70
     BATCH_SIZE:
         BS_TRAIN: 128
-        BS_TEST: 256
+        BS_TEST: 128
     LOSS:
         NAME: CROSS ENTROPY
         BETA: 1

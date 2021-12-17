@@ -156,7 +156,11 @@ with torch.no_grad():
 
             saving_path = os.path.join(ResultsPath, 'CAMs', 'Level ' + str(level))
             if not os.path.isdir(saving_path):
-                os.mkdir(saving_path)
+                os.makedirs(saving_path)
+
+            saving_path_rgb = os.path.join(ResultsPath, 'RGBs', 'Level ' + str(level))
+            if not os.path.isdir(saving_path_rgb):
+                os.makedirs(saving_path_rgb)
 
             AMs = GenericPlottingUtils.getActivationMap(features, images, normalization='minmax', visualize=True)
 
@@ -164,6 +168,7 @@ with torch.no_grad():
             for i, AM in enumerate(AMs):
                 img_rgb = (GenericPlottingUtils.tensor2numpy(images[i, :], mean=CONFIG['DATASET']['MEAN'], STD=CONFIG['DATASET']['STD']) * 255).astype(np.uint8)
                 im_to_save = np.concatenate((img_rgb, cv2.cvtColor(AM.astype(np.uint8), cv2.COLOR_BGR2RGB)), axis=1)
+                # im_to_save =  cv2.cvtColor(AM.astype(np.uint8), cv2.COLOR_BGR2RGB)
 
                 GT = valDataset.classes[labels[i].item()]
                 pred = valDataset.classes[torch.argmax(output, dim=1)[i].item()]
@@ -179,8 +184,15 @@ with torch.no_grad():
                                 org=(10, 40), fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.8, color=[0, 0, 0])
 
                 # Save Image
+                # Resize numpy image to the size of the original image
+                # im_to_save = cv2.resize(im_to_save, (32*7, 32*7))
+                # img_rgb = cv2.resize(img_rgb, (32 * 7, 32 * 7))
+
                 im = Image.fromarray(im_to_save)
                 im.save(os.path.join(saving_path, (str(saved_images).zfill(3) + '.jpg')))
+
+                im = Image.fromarray(img_rgb)
+                im.save(os.path.join(saving_path_rgb, (str(saved_images).zfill(3) + '.jpg')))
 
                 saved_images += 1
 

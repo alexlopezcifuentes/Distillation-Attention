@@ -204,7 +204,7 @@ def plotTrainingResults(train_losses, val_losses, train_accuracies, val_accuraci
         pickle.dump(lr_list, filehandle)
 
 
-def getActivationMap(features, RGBbatch=None, visualize=True, resize=True, normalization='none'):
+def getActivationMap(features, RGBbatch=None, visualize=True, resize=True, normalization='none', no_rgb=False):
     """
     Funtion to get the Activation Maps from a set of features and blend them with the original RGB Image
     :param feature_conv: Feature tensor
@@ -239,7 +239,10 @@ def getActivationMap(features, RGBbatch=None, visualize=True, resize=True, norma
             CAM = cv2.applyColorMap(np.uint8(255 * CAM), cv2.COLORMAP_JET)
 
             # Combine both images
-            CAMs_list_display.append(CAM * 0.5 + img * 0.5)
+            if no_rgb:
+                CAMs_list_display.append(CAM)
+            else:
+                CAMs_list_display.append(CAM * 0.5 + img * 0.5)
 
         CAMs = CAMs_list_display
 

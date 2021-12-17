@@ -1,6 +1,7 @@
 DATASET:
     NAME: MIT67
-    ROOT: ./Data/MITIndoor67
+    ROOT: /home/alc/Desktop/rhome/alc/Datasets/MITIndoor67
+#    ROOT: ./Data/MITIndoor67
     N_CLASSES: 67
     MEAN: [0.43216, 0.394666, 0.37645] # ImageNet
     STD: [0.22803, 0.22145, 0.216989] # ImageNet

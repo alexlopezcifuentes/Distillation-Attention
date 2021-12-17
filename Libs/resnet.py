@@ -219,7 +219,7 @@ class ResNet(nn.Module):
         x = self.fc(a4)
 
         if self.multiscale:
-            return x, (a0, a1, a2, a3, a4)
+            return x, [a0, a1, a2, a3, a4]
         else:
             return x, None
 

@@ -1,6 +1,7 @@
 DATASET:
     NAME: SUN397
-    ROOT: ./Data/SUN397
+    ROOT: /home/alc/Desktop/rhome/alc/Datasets/SUN397
+#    ROOT: ./Data/SUN397
     N_CLASSES: 397
     MEAN: [0.43216, 0.394666, 0.37645] # ImageNet
     STD: [0.22803, 0.22145, 0.216989] # ImageNet
