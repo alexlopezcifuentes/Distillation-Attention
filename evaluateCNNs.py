@@ -166,11 +166,11 @@ def validate(val_loader, model, teacher_model):
                       'Validation Accuracy {accuracy.val:.3f} (avg: {accuracy.avg:.3f})\t'.
                       format(i, len(val_loader), batch_time=batch_time, accuracy=accuracies['top1']))
 
-        with open(os.path.join('Results', args.Model, 'Files', 'predictions.pkl'), 'wb') as filehandle:
+        with open(os.path.join(args.Model, 'Files', 'predictions.pkl'), 'wb') as filehandle:
             # store the data as binary data stream
             pickle.dump(pred_list, filehandle)
 
-        with open(os.path.join('Results', args.Model, 'Files', 'gt.pkl'), 'wb') as filehandle:
+        with open(os.path.join(args.Model, 'Files', 'gt.pkl'), 'wb') as filehandle:
             # store the data as binary data stream
             pickle.dump(GT_list, filehandle)
 
@@ -197,7 +197,7 @@ global USE_CUDA, CONFIG
 USE_CUDA = torch.cuda.is_available()
 
 args = parser.parse_args()
-CONFIG = getValidationConfiguration(args.Model)
+CONFIG = getValidationConfiguration(args.Model, ResultsPath='')
 
 # Initialize best precision
 best_prec = 0
@@ -239,7 +239,7 @@ if USE_CUDA:
     model.cuda()
 
 # Load Model to evaluate
-completePath = os.path.join('Results', args.Model, 'Models', CONFIG['MODEL']['ARCH'] + '_' + CONFIG['DATASET']['NAME'] + '_best.pth.tar')
+completePath = os.path.join(args.Model, 'Models', CONFIG['MODEL']['ARCH'] + '_' + CONFIG['DATASET']['NAME'] + '_best.pth.tar')
 
 if os.path.isfile(completePath):
     checkpoint = torch.load(completePath)
@@ -363,7 +363,7 @@ sumary_dict_file = {'VALIDATION': {'ACCURACY TOP1': str(round(accuracies['top1']
                     }
 
 # Save new summary stats for the new best model
-with open(os.path.join('Results', args.Model, CONFIG['MODEL']['ARCH'] + ' ' + CONFIG['DATASET']['NAME'] + ' Validation Report.yaml'), 'w') as file:
+with open(os.path.join(args.Model, CONFIG['MODEL']['ARCH'] + ' ' + CONFIG['DATASET']['NAME'] + ' Validation Report.yaml'), 'w') as file:
     yaml.safe_dump(sumary_dict_file, file)
 
 print('-' * 65)
@@ -376,7 +376,7 @@ plt.ylabel('Classes', fontsize=10), plt.xlabel('Classes', fontsize=10)
 plt.xticks(np.arange(len(valDataset.classes)), valDataset.classes, rotation=90, fontsize=2)
 plt.yticks(np.arange(len(valDataset.classes)), valDataset.classes, rotation=0, fontsize=2)
 plt.title('Confusion Matrix', fontsize=10)
-plt.savefig(os.path.join('Results', args.Model, 'Images', 'Confusion Matrix.pdf'), bbox_inches='tight', dpi=600)
+plt.savefig(os.path.join(args.Model, 'Images', 'Confusion Matrix.pdf'), bbox_inches='tight', dpi=600)
 plt.close()
 
 # Accuracy per Class
@@ -386,7 +386,7 @@ plt.ylabel('Accuracy', fontsize=15)
 plt.xlabel('Classes', fontsize=15)
 plt.xticks(np.arange(len(accuracies['class'])), valDataset.classes, rotation=90, fontsize=1)
 plt.title('Accuracy per noun class')
-plt.savefig(os.path.join('Results', args.Model, 'Images', 'Acc Class.pdf'), bbox_inches='tight', dpi=300)
+plt.savefig(os.path.join(args.Model, 'Images', 'Acc Class.pdf'), bbox_inches='tight', dpi=300)
 plt.close()
 
 print('Evaluation finished!')

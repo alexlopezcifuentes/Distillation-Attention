@@ -5,6 +5,7 @@
 
 cd ..
 chmod +x trainCNNs.py
+ip4=$(/sbin/ip -o -4 addr list enp6s18 | awk '{print $4}' | cut -d/ -f1)
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- #
 #                                                                                                                                                                        #
@@ -19,8 +20,8 @@ chmod +x trainCNNs.py
 # Example script are given for the ADE20K. Changing the dataset parameter is enough to train models for the other datasets.
 
 
-python trainCNNs.py --Architecture ResNet18 --Dataset ADE20K --Distillation DFT --Options TEACHER='Teacher ResNet50 ADE20K'  COMMENTS='Proposed DCT approach T:R50 S:R18'
-python trainCNNs.py --Architecture ResNet18 --Dataset ADE20K --Distillation AT  --Options TEACHER='Teacher ResNet50 ADE20K'  COMMENTS='AT approach T:R50 S:R18'
+#python trainCNNs.py --Architecture ResNet18 --Dataset ADE20K --Distillation DFT --Options TEACHER='Teacher ResNet50 ADE20K'  COMMENTS='Proposed DCT approach T:R50 S:R18'
+#python trainCNNs.py --Architecture ResNet18 --Dataset ADE20K --Distillation AT  --Options TEACHER='Teacher ResNet50 ADE20K'  COMMENTS='AT approach T:R50 S:R18'
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- #
 #                                                                              TEACHERS                                                                                  #
@@ -29,17 +30,8 @@ python trainCNNs.py --Architecture ResNet18 --Dataset ADE20K --Distillation AT  
 # Regular Teachers
 #python trainCNNs.py --Architecture ResNet152  --Dataset ADE20K --Distillation None --Options BS_TRAIN=80 LR=0.01 COMMENTS='ResNet152 Teacher training'
 
-#python trainCNNs.py --Architecture ResNet50   --Dataset MIT67 --Distillation None --Options LR=0.01 COMMENTS='ResNet50 Teacher training'
-#python trainCNNs.py --Architecture ResNet152  --Dataset MIT67 --Distillation None --Options BS_TRAIN=80 LR=0.01 COMMENTS='ResNet152 Teacher training'
-
-#python trainCNNs.py --Architecture ResNet50   --Dataset SUN397 --Distillation None --Options LR=0.01 COMMENTS='ResNet50 Teacher training'
-#python trainCNNs.py --Architecture ResNet152  --Dataset SUN397 --Distillation None --Options BS_TRAIN=80 LR=0.01 COMMENTS='ResNet152 Teacher training'
-
 # CIFAR100
 #python trainCNNs.py --Architecture ResNet56C  --Dataset CIFAR100 --Distillation None --Training SGD_CIFAR --Options COMMENTS='ResNet56C Teacher training'
-#python trainCNNs.py --Architecture ResNet56C  --Dataset CIFAR100 --Distillation None --Training SGD_CIFAR --Options COMMENTS='ResNet56C Teacher training'
-#python trainCNNs.py --Architecture ResNet110C  --Dataset CIFAR100 --Distillation None --Training SGD_CIFAR --Options COMMENTS='ResNet110C Teacher training'
-#python trainCNNs.py --Architecture ResNet32x4C  --Dataset CIFAR100 --Distillation None --Training SGD_CIFAR --Options COMMENTS='ResNet110C Teacher training'
 
 # Transfer Learning
 #python trainCNNs.py --Architecture ResNet34  --Dataset MIT67 --Distillation None --Options PRETRAINED=ImageNet FINETUNNING=True LR=0.01 COMMENTS="ResNet34 Teacher training. Finetunnning from ImageNet pretraining"
@@ -51,12 +43,9 @@ python trainCNNs.py --Architecture ResNet18 --Dataset ADE20K --Distillation AT  
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- #
 
 #python trainCNNs.py --Architecture ResNet18    --Dataset ADE20K --Distillation None --Options COMMENTS='ResNet18 Baseline training'
-#python trainCNNs.py --Architecture ResNet20 --Dataset ADE20K --Distillation None --Options COMMENTS='ResNet20 Baseline training'
-#python trainCNNs.py --Architecture ResNet56 --Dataset ADE20K --Distillation None --Options COMMENTS='ResNet56 Baseline training'
 
 # CIFAR100
 #python trainCNNs.py --Architecture ResNet20C  --Dataset CIFAR100 --Distillation None --Training SGD_CIFAR --Options COMMENTS="ResNet20C Baseline training"
-
 
 # Transfer Learning
 #python trainCNNs.py --Architecture ResNet18    --Dataset MIT67 --Distillation None --Options --Options PRETRAINED=ImageNet FINETUNNING=True LR=0.1 COMMENTS="ResNet18 Baseline training. Finetunnning from ImageNet pretraining"
@@ -71,16 +60,12 @@ python trainCNNs.py --Architecture ResNet18 --Dataset ADE20K --Distillation AT  
                    # -------------------------------------------------------------------------------------------------------------------------------- #
 
 # Knowledge Distillation Method
-#if [ $1 -eq 0 ];
-#then
 #python trainCNNs.py --Architecture ResNet18    --Dataset ADE20K --Distillation DFT --Options TEACHER='Teacher ResNet50 ADE20K'  COMMENTS='Proposed DCT approach T:R50 S:R18'
 #python trainCNNs.py --Architecture ResNet18    --Dataset ADE20K --Distillation DFT --Options PRED_GUIDE=False TEACHER='Teacher ResNet50 ADE20K'  COMMENTS='Proposed DCT approach T:R50 S:R18. No PRED_GUIDE'
-#fi
+
 
 # CIFAR100
 #python trainCNNs.py --Architecture ResNet20C --Dataset CIFAR100 --Distillation DFT --Training SGD_CIFAR --Options TEACHER='ResNet110C CIFAR100' PRED_GUIDE=False COMMENTS='Proposed DCT approach T:R110C S:R20C.'
-#python trainCNNs.py --Architecture ResNet32C --Dataset CIFAR100 --Distillation DFT --Training SGD_CIFAR --Options TEACHER='ResNet110C CIFAR100' PRED_GUIDE=False COMMENTS='Proposed DCT approach T:R110C S:R20C.'
-#python trainCNNs.py --Architecture ResNet8x4C --Dataset CIFAR100 --Distillation DFT --Training SGD_CIFAR --Options TEACHER='ResNet32x4C CIFAR100' PRED_GUIDE=False COMMENTS='Proposed DCT approach T:R32x4C S:R20C.'
 
 
 # Transfer Learning
@@ -93,51 +78,36 @@ python trainCNNs.py --Architecture ResNet18 --Dataset ADE20K --Distillation AT  
 #python trainCNNs.py --Architecture ResNet18    --Dataset ADE20K --Distillation DFT --Options TEACHER='Teacher ResNet50 ADE20K'  DELTA=1 BETA=0.1 COMMENTS='Proposed DFT+KD approach T:R50 S:R18'
 
                    # -------------------------------------------------------------------------------------------------------------------------------- #
-                   #                                                                 AT                                                               #
+                   #                                                                 SOTA                                                             #
                    # -------------------------------------------------------------------------------------------------------------------------------- #
 
-# Knowledge Distillation Method
-#python trainCNNs.py --Architecture ResNet18    --Dataset ADE20K --Distillation AT --Options TEACHER='Teacher ResNet50 ADE20K'  COMMENTS='AT T:R50 S:R18'
+declare -a DATASETS=("ADE20K" "SUN397" "MIT67")
 
-# Knowledge Distillation Method + Original Hinton KD Method. It is obtained with Alpha=1, Beta=0.1 and Delta=1
-#python trainCNNs.py --Architecture ResNet18    --Dataset ADE20K --Distillation AT --Options TEACHER='Teacher ResNet50 ADE20K'  DELTA=1 BETA=0.1 COMMENTS='AT+KD T:R50 S:R18'
+if [ "$ip4" == '192.168.23.149' ]; then
+DIST="CRD"
 
+elif [ "$ip4" == '192.168.23.150' ]; then
+DIST="PKT"
 
-                   # -------------------------------------------------------------------------------------------------------------------------------- #
-                   #                                                               REVIEW                                                             #
-                   # -------------------------------------------------------------------------------------------------------------------------------- #
+elif [ "$ip4" == '192.168.23.151' ]; then
+DIST="REVIEW"
 
-# Knowledge Distillation Method
-#python trainCNNs.py --Architecture ResNet34    --Dataset ADE20K --Distillation REVIEW --Options TEACHER='Teacher ResNet152 ADE20K'  COMMENTS='REVIEW T:R152 S:R34'
-#python trainCNNs.py --Architecture MobileNetV2 --Dataset ADE20K --Distillation REVIEW --Options TEACHER='Teacher ResNet50 ADE20K'   COMMENTS='REVIEW T:R50 S:MobileNetV2'
+elif [ "$ip4" == '192.168.23.152' ]; then
+DIST="VID"
 
-#if [ $1 -eq 0 ];
-#then
-  #python trainCNNs.py --Architecture ResNet18    --Dataset MIT67  --Distillation REVIEW  --Options BS_TRAIN=60 TEACHER='Teacher ResNet50 MIT67'  COMMENTS='REVIEW T:R50 S:ResNet18'
-#  python trainCNNs.py --Architecture ResNet34    --Dataset MIT67  --Distillation REVIEW  --Options BS_TRAIN=60 TEACHER='Teacher ResNet152 MIT67' COMMENTS='REVIEW T:R152 S:R34'
-#  python trainCNNs.py --Architecture MobileNetV2 --Dataset MIT67  --Distillation REVIEW  --Options BS_TRAIN=60 TEACHER='Teacher ResNet50 MIT67'  COMMENTS='REVIEW T:R50 S:MobileNetV2'
-#fi
+elif [ "$ip4" == '192.168.23.210' ]; then
+DIST="AT"
 
-#python trainCNNs.py --Architecture ResNet18    --Dataset SUN397 --Distillation REVIEW --Options BS_TRAIN=60 TEACHER='Teacher ResNet50 SUN397'   COMMENTS='REVIEW T:R50 S:ResNet18'
-#python trainCNNs.py --Architecture ResNet34    --Dataset SUN397 --Distillation REVIEW --Options BS_TRAIN=60 TEACHER='Teacher ResNet152 SUN397'  COMMENTS='REVIEW T:R152 S:R34'
-#python trainCNNs.py --Architecture MobileNetV2 --Dataset SUN397 --Distillation REVIEW --Options BS_TRAIN=60 TEACHER='Teacher ResNet50 SUN397'   COMMENTS='REVIEW T:R50 S:MobileNetV2'
+fi
 
+for dataset in "${DATASETS[@]}"
+  do
+     python trainCNNs.py --Architecture "ResNet18"    --Dataset ${dataset} --Distillation $DIST --Options TEACHER="Teacher ResNet50 ${dataset}"  COMMENTS="${DIST} ResNet18 in ${dataset}"
+     python trainCNNs.py --Architecture "ResNet34"    --Dataset ${dataset} --Distillation $DIST --Options TEACHER="Teacher ResNet152 ${dataset}" COMMENTS="${DIST} ResNet34 in ${dataset}"
+     python trainCNNs.py --Architecture "MobileNetV2" --Dataset ${dataset} --Distillation $DIST --Options TEACHER="Teacher ResNet50 ${dataset}"  COMMENTS="${DIST} MobileNetV2 in ${dataset} "
 
-# Knowledge Distillation Method + Original Hinton KD Method. It is obtained with Alpha=1, Beta=0.1 and Delta=1
-#python trainCNNs.py --Architecture ResNet34    --Dataset ADE20K --Distillation REVIEW --Options TEACHER='Teacher ResNet152 ADE20K'  DELTA=1 BETA=0.1 COMMENTS='REVIEW+KD T:R152 S:R34'
-#python trainCNNs.py --Architecture MobileNetV2 --Dataset ADE20K --Distillation REVIEW --Options TEACHER='Teacher ResNet50 ADE20K'   DELTA=1 BETA=0.1 COMMENTS='REVIEW+KD T:R50 S:MobileNetV2'
-
-#if [ $1 -eq 0 ];
-#then
-#  python trainCNNs.py --Architecture ResNet18    --Dataset MIT67 --Distillation REVIEW --Options BS_TRAIN=60 TEACHER='Teacher ResNet50 MIT67'   DELTA=1 BETA=0.1 COMMENTS='REVIEW+KD T:R50 S:ResNet18'
-#  python trainCNNs.py --Architecture ResNet34    --Dataset MIT67 --Distillation REVIEW --Options BS_TRAIN=60 TEACHER='Teacher ResNet152 MIT67'  DELTA=1 BETA=0.1 COMMENTS='REVIEW+KD T:R152 S:R34'
-#  python trainCNNs.py --Architecture MobileNetV2 --Dataset MIT67 --Distillation REVIEW --Options BS_TRAIN=60 TEACHER='Teacher ResNet50 MIT67'   DELTA=1 BETA=0.1 COMMENTS='REVIEW+KD T:R50 S:MobileNetV2'
-#fi
-
-#if [ $1 -eq 1 ];
-#then
-#  python trainCNNs.py --Architecture ResNet18    --Dataset SUN397 --Distillation REVIEW --Options BS_TRAIN=60 TEACHER='Teacher ResNet50 SUN397'   DELTA=1 BETA=0.1 COMMENTS='REVIEW+KD T:R50 S:ResNet18'
-#  python trainCNNs.py --Architecture ResNet34    --Dataset SUN397 --Distillation REVIEW --Options BS_TRAIN=60 TEACHER='Teacher ResNet152 SUN397'  DELTA=1 BETA=0.1 COMMENTS='REVIEW+KD T:R152 S:R34'
-#  python trainCNNs.py --Architecture MobileNetV2 --Dataset SUN397 --Distillation REVIEW --Options BS_TRAIN=60 TEACHER='Teacher ResNet50 SUN397'   DELTA=1 BETA=0.1 COMMENTS='REVIEW+KD T:R50 S:MobileNetV2'
-#fi
-
+     # + KD
+     python trainCNNs.py --Architecture "ResNet18"    --Dataset ${dataset} --Distillation $DIST --Options TEACHER="Teacher ResNet50 ${dataset}"  DELTA=1 BETA=0.1 COMMENTS="${DIST} ResNet18 in ${dataset} + KD"
+     python trainCNNs.py --Architecture "ResNet34"    --Dataset ${dataset} --Distillation $DIST --Options TEACHER="Teacher ResNet152 ${dataset}" DELTA=1 BETA=0.1 COMMENTS="${DIST} ResNet34 in ${dataset} + KD"
+     python trainCNNs.py --Architecture "MobileNetV2" --Dataset ${dataset} --Distillation $DIST --Options TEACHER="Teacher ResNet50 ${dataset}"  DELTA=1 BETA=0.1 COMMENTS="${DIST} MobileNetV2 in ${dataset} + KD"
+  done

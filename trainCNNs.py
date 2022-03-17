@@ -5,6 +5,7 @@ sys.path.insert(0, './Distillation Zoo/crd')
 sys.path.insert(0, './Libs/Datasets')
 import argparse
 import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 import time
 import torch
 import torch.nn as nn
@@ -98,7 +99,7 @@ def train(train_loader, model, optimizer, criterion_list, teacher_model=None):
     # Weight for Cross Entropy Loss
     beta = float(CONFIG['TRAINING']['LOSS']['BETA'])
     # Weight for Distillation Loss
-    alpha = float(CONFIG['DISTILLATION']['ALPHA'])
+    alpha = float(CONFIG['DISTILLATION']['ALPHA']) + (float(CONFIG['DISTILLATION']['ALPHA']) * float(CONFIG['DISTILLATION']['PERCENTAGE_CHANGE_ALPHA']))
     # Weight for Original Knowledge Distillation Loss
     delta = float(CONFIG['TRAINING']['KD']['DELTA'])
 
@@ -117,9 +118,9 @@ def train(train_loader, model, optimizer, criterion_list, teacher_model=None):
             else:
                 images = mini_batch['Images'].cuda()
                 labels = mini_batch['Labels'].cuda()
-                idx = mini_batch['Index'].cuda()
+                index = mini_batch['Index'].cuda()
             if CONFIG['DISTILLATION']['D_LOSS'].lower() == 'crd':
-                index = mini_batch['Idx'].cuda()
+                index = mini_batch['Index'].cuda()
                 contrast_idx = mini_batch['Sample Idx'].cuda()
             elif CONFIG['DISTILLATION']['D_LOSS'].lower() == 'ckd' and images.shape[0] < batch_size:
                 continue
@@ -272,48 +273,48 @@ def validate(val_loader, model, criterion_list, teacher_model=None):
             loss = loss_class + loss_distillation + loss_kd
 
             # -----------------------------------------------------------------------------------------------------------#
-            if i == 0:
-                features_student = features_student[:-1]
-                features_teacher = features_teacher[:-1]
-
-                # Loop over all the multi scale AMs
-                for level, (features_s, features_t) in enumerate(zip(features_student, features_teacher)):
-
-                    AM_s_list = GenericPlottingUtils.getActivationMap(features_s.detach(), images, normalization='None',
-                                                                 visualize=False, no_rgb=True)
-
-                    j = 0
-                    AM_s = AM_s_list[j]
-
-                    # for j, AM_s in enumerate(AM_s_list):
-                    saving_path = os.path.join(ResultsPath, 'CAMs', str(j),
-                                               'Level ' + str(level))
-                    if not os.path.isdir(saving_path):
-                        os.makedirs(saving_path)
-
-                    # Convert tensor to numpy array. Then save it as mat file
-                    AM_s = AM_s.cpu().numpy()
-                    scipy.io.savemat(os.path.join(saving_path, 'Student Epoch {}.mat'.format(str(epoch).zfill(3))), {'AM_s': AM_s})
-
-                    # Save Images
-                    # im_to_save = cv2.cvtColor(AM_s.astype(np.uint8), cv2.COLOR_BGR2RGB)
-                    # im = Image.fromarray(im_to_save)
-                    # im.save(os.path.join(saving_path, (str(epoch).zfill(3) + '.jpg')))
-
-                    if epoch == 0:
-                        AM_t = GenericPlottingUtils.getActivationMap(features_t.detach(), images,
-                                                                     normalization='None',
-                                                                     visualize=False, no_rgb=True)
-
-                        # Save Images
-                        AM_t = AM_t[j]
-                        # Convert tensor to numpy array. Then save it as mat file
-                        AM_t = AM_t.cpu().numpy()
-                        scipy.io.savemat(os.path.join(saving_path, 'Teacher Epoch {}.mat'.format(str(epoch).zfill(3))), {'AM_t': AM_t})
-
-                        # im_to_save = cv2.cvtColor(AM_t.astype(np.uint8), cv2.COLOR_BGR2RGB)
-                        # im = Image.fromarray(im_to_save)
-                        # im.save(os.path.join(saving_path, 'Teacher ' + (str(epoch).zfill(3) + '.jpg')))
+            # if i == 0:
+            #     features_student = features_student[:-1]
+            #     features_teacher = features_teacher[:-1]
+            #
+            #     # Loop over all the multi scale AMs
+            #     for level, (features_s, features_t) in enumerate(zip(features_student, features_teacher)):
+            #
+            #         AM_s_list = GenericPlottingUtils.getActivationMap(features_s.detach(), images, normalization='None',
+            #                                                      visualize=False, no_rgb=True)
+            #
+            #         j = 0
+            #         AM_s = AM_s_list[j]
+            #
+            #         # for j, AM_s in enumerate(AM_s_list):
+            #         saving_path = os.path.join(ResultsPath, 'CAMs', str(j),
+            #                                    'Level ' + str(level))
+            #         if not os.path.isdir(saving_path):
+            #             os.makedirs(saving_path)
+            #
+            #         # Convert tensor to numpy array. Then save it as mat file
+            #         AM_s = AM_s.cpu().numpy()
+            #         scipy.io.savemat(os.path.join(saving_path, 'Student Epoch {}.mat'.format(str(epoch).zfill(3))), {'AM_s': AM_s})
+            #
+            #         # Save Images
+            #         # im_to_save = cv2.cvtColor(AM_s.astype(np.uint8), cv2.COLOR_BGR2RGB)
+            #         # im = Image.fromarray(im_to_save)
+            #         # im.save(os.path.join(saving_path, (str(epoch).zfill(3) + '.jpg')))
+            #
+            #         if epoch == 0:
+            #             AM_t = GenericPlottingUtils.getActivationMap(features_t.detach(), images,
+            #                                                          normalization='None',
+            #                                                          visualize=False, no_rgb=True)
+            #
+            #             # Save Images
+            #             AM_t = AM_t[j]
+            #             # Convert tensor to numpy array. Then save it as mat file
+            #             AM_t = AM_t.cpu().numpy()
+            #             scipy.io.savemat(os.path.join(saving_path, 'Teacher Epoch {}.mat'.format(str(epoch).zfill(3))), {'AM_t': AM_t})
+            #
+            #             # im_to_save = cv2.cvtColor(AM_t.astype(np.uint8), cv2.COLOR_BGR2RGB)
+            #             # im = Image.fromarray(im_to_save)
+            #             # im.save(os.path.join(saving_path, 'Teacher ' + (str(epoch).zfill(3) + '.jpg')))
 
             # -----------------------------------------------------------------------------------------------------------#
 
@@ -536,10 +537,10 @@ else:
 
 
 train_loader = torch.utils.data.DataLoader(trainDataset, batch_size=int(CONFIG['TRAINING']['BATCH_SIZE']['BS_TRAIN']), shuffle=True,
-                                           num_workers=8, pin_memory=True)
+                                           num_workers=6, pin_memory=True)
 
 val_loader = torch.utils.data.DataLoader(valDataset, batch_size=int(CONFIG['TRAINING']['BATCH_SIZE']['BS_TEST']), shuffle=False,
-                                         num_workers=8, pin_memory=True)
+                                         num_workers=6, pin_memory=True)
 
 dataset_nclasses = trainDataset.nclasses
 

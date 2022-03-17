@@ -184,7 +184,7 @@ class SceneRecognitionDatasetCRD(Dataset):
         neg_idx = np.random.choice(self.cls_negative[label], self.k, replace=replace)
         sample_idx = np.hstack((np.asarray([pos_idx]), neg_idx))
 
-        crd_info = {'Idx': idx, 'Sample Idx': sample_idx}
+        crd_info = {'Index': idx, 'Sample Idx': sample_idx}
         sample.update(crd_info)
 
         return sample

@@ -6,6 +6,7 @@
 cd ..
 chmod +x evaluateCNNs.py
 chmod +x extractAMs.py
+#cd "Results/ADE20K/SOTA Alpha Search/"
 #chmod +x visualizeAMs.py
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- #
@@ -39,9 +40,9 @@ chmod +x extractAMs.py
 #python evaluateCNNs.py --Model "ADE20K/MobileNetV2 ADE20K Review + KD"
 
 # MIT
-python evaluateCNNs.py --Model "MIT67/ResNet18 MIT67 Review"
-python evaluateCNNs.py --Model "MIT67/ResNet34 MIT67 Review"
-python evaluateCNNs.py --Model "MIT67/MobileNetV2 MIT67 Review"
+#python evaluateCNNs.py --Model "MIT67/ResNet18 MIT67 Review"
+#python evaluateCNNs.py --Model "MIT67/ResNet34 MIT67 Review"
+#python evaluateCNNs.py --Model "MIT67/MobileNetV2 MIT67 Review"
 
 # SUN397
 #python evaluateCNNs.py --Model "SUN397/ResNet18 SUN397 Review"
@@ -80,6 +81,21 @@ python evaluateCNNs.py --Model "MIT67/MobileNetV2 MIT67 Review"
 #  done
 
 
+for d in Results/ADE20K/to_evaluate/*/ ; do
+#    echo "$d"
+    python evaluateCNNs.py --Model "${d}"
+done
+
+for d in Results/MIT67/to_evaluate/*/ ; do
+#    echo "$d"
+    python evaluateCNNs.py --Model "${d}"
+done
+
+
+for d in Results/SUN397/to_evaluate/*/ ; do
+#    echo "$d"
+    python evaluateCNNs.py --Model "${d}"
+done
 
 
 

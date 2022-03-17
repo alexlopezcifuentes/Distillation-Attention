@@ -2,6 +2,7 @@ DISTILLATION:
     TEACHER: 'Teacher ResNet50 ADE20K' # Options, Path or None
     D_LOSS: CKD
     ALPHA: 400
+    PERCENTAGE_CHANGE_ALPHA: 0
     MULTISCALE: True
 
 

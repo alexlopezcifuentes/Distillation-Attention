@@ -1,6 +1,7 @@
 DISTILLATION:
     TEACHER: 'Teacher ResNet50 ADE20K' # Options, Path or None
     D_LOSS: Review
-    ALPHA: 1
+    ALPHA: 1.8 # Original (1)
+    PERCENTAGE_CHANGE_ALPHA: 0
     MULTISCALE: True
 

@@ -2,5 +2,6 @@ DISTILLATION:
     TEACHER: 'None'
     D_LOSS: None
     ALPHA: 0
+    PERCENTAGE_CHANGE_ALPHA: 0
     MULTISCALE: True
     PRED_GUIDE: False

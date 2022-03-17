@@ -27,12 +27,38 @@ color2 = 'tab:blue'
 
 plt.figure()
 plt.plot(AlfaValues, Top1, '*-', markersize=5, color=color1, label='Top@1 DCT')
-plt.plot(AlfaValues, Top1_v, '*-', markersize=5, color=color2, label='Top@1 Vanilla R18')
-plt.plot(AlfaValues, Top5, '*-.', markersize=5, color=color1, label='Top@5 DCT')
-plt.plot(AlfaValues, Top5_v, '*-.', markersize=5, color=color2, label='Top@5 Vanilla R18')
+# plt.plot(AlfaValues, Top5, '*-.', markersize=5, color=color1, label='Top@5 DCT')
 plt.plot(AlfaValues, MCA, '*--', markersize=5, color=color1, label='MCA DCT')
-plt.plot(AlfaValues, MCA_v, '*--', markersize=5, color=color2, label='MCA Vanilla R18')
+
+plt.plot(AlfaValues, Top1_v, color=color2, label='Top@1 Vanilla R18')
+# plt.plot(AlfaValues, Top5_v, color=color2, label='Top@5 Vanilla R18')
+plt.plot(AlfaValues, MCA_v, color=color2, label='MCA Vanilla R18')
 plt.xlabel(r'$\alpha$ Parameter')
 plt.ylabel('Accuracy')
 plt.legend()
 plt.savefig('Ablation Alfa.pdf', dpi=300)
+
+
+fig, ax1 = plt.subplots()
+
+color = 'tab:red'
+ax1.plot(AlfaValues, Top1, '*-', markersize=5, color=color, label='Top@1 DCT')
+ax1.plot(AlfaValues, Top1_v, color=color, label='Top@1 Vanilla R18')
+ax1.set_ylabel('Accuracy', color=color)
+ax1.tick_params(axis='y', labelcolor=color)
+
+ax2 = ax1.twinx()
+
+
+color = 'tab:blue'
+ax2.plot(AlfaValues, MCA, '*--', markersize=5, color=color, label='MCA DCT')
+ax2.plot(AlfaValues, MCA_v, color=color, label='MCA Vanilla R18')
+ax2.set_ylabel('MCA', color=color)
+ax2.tick_params(axis='y', labelcolor=color)
+ax2.set_ylim(bottom=9)
+
+ax1.set_xlabel(r'$\alpha$ Parameter')
+ax1.legend()
+ax2.legend()
+plt.savefig('Ablation Alfa 2 .svg')
+

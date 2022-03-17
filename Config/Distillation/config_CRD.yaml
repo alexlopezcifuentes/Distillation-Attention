@@ -1,7 +1,8 @@
 DISTILLATION:
     TEACHER: 'Teacher ResNet50 ADE20K' # Options, Path or None
     D_LOSS: CRD
-    ALPHA: 0.8
+    ALPHA: 1.4 # Original (0.8)
+    PERCENTAGE_CHANGE_ALPHA: 0
     MULTISCALE: True
     K: 16384
     T: 0.07
